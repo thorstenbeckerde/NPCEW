@@ -1,4 +1,4 @@
-# NPCEM
+# NPC Emotion Weaver
 **NPC Emotion Weaver** is a visual tool for designing and mapping the emotional states of Non-Player Characters (NPCs). Inspired by the Fuzzy Emotion Mapping System (FEMS), it helps you externalize and explore an NPC's internal landscape by visualizing how their emotions relate, resonate, and shift. This version is enhanced with AI-powered features to assist in character development.
 
 #### **Core Concepts**
