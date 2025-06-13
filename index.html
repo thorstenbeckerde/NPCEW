@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPC Emotion Weaver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            touch-action: none;
+            border-radius: 0.5rem;
+        }
+        #npcWeaverCanvas { /* Ensure this ID matches JS */
+            cursor: grab;
+            z-index: 10;
+        }
+        #npcWeaverCanvas:focus {
+            outline: none;
+        }
+        #npcWeaverCanvas.grabbing {
+            cursor: grabbing;
+        }
+        .control-panel {
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .control-panel-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-bottom: 1rem;
+        }
+        .control-panel-content::-webkit-scrollbar { width: 8px; }
+        .control-panel-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .control-panel-content::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .control-panel-content::-webkit-scrollbar-thumb:hover { background: #555; }
+        .color-palette-button { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
+        .color-palette-button.selected { border-color: #000; box-shadow: 0 0 0 2px white, 0 0 0 4px #000; }
+        .symbol-button { font-size: 1.25rem; padding: 0.25rem; border-radius: 0.25rem; cursor: pointer; transition: background-color 0.2s; }
+        .symbol-button.selected { background-color: #cbd5e1; }
+        .tooltip { position: relative; display: inline-block; }
+        .tooltip .tooltiptext { visibility: hidden; width: 120px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1000; bottom: 125%; left: 50%; margin-left: -60px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip .tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #555 transparent transparent transparent; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .modal-content textarea { width: 100%; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 0.375rem; padding: 0.5rem; font-family: monospace; font-size: 0.875rem; }
+        .help-modal-content { max-height: 60vh; overflow-y: auto; text-align: left; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+        input[type="file"] { border: 1px solid #cbd5e1; padding: 0.5rem; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+        input[type="file"]::file-selector-button { margin-right: 0.5rem; border: none; background: #6366f1; padding: 0.5rem 0.75rem; border-radius: 0.375rem; color: white; cursor: pointer; transition: background-color .15s ease-in-out; }
+        input[type="file"]::file-selector-button:hover { background: #4f46e5; }
+        .label-cbx { user-select: none; cursor: pointer; margin-bottom: 0; display: flex; align-items: center; }
+        .label-cbx input:checked + .checkbox { border-color: #6366f1; }
+        .label-cbx input:checked + .checkbox svg path { fill: #6366f1; }
+        .label-cbx .checkbox { position: relative; top: 2px; float: left; margin-right: 8px; width: 20px; height: 20px; border: 2px solid #d1d5db; border-radius: 3px; }
+        .label-cbx .checkbox svg { position: absolute; top: -2px; left: -2px; }
+        .label-cbx .checkbox svg path { fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 71px; stroke-dashoffset: 71px; transition: all .3s ease; }
+        .label-cbx > span { pointer-events: none; line-height: 1.2; }
+        .control-panel-footer { padding: 0.75rem 1rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.75rem; color: #6b7280; flex-shrink: 0; }
+        .vocabulary-term {
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            color: #334155;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            text-align: left;
+        }
+        .vocabulary-term:hover {
+            background-color: #e0e7ff;
+            border-color: #c7d2fe;
+        }
+        .transition-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3rem 0.5rem;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+        }
+        .transition-item button {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+            border: none;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size:0.7rem;
+            cursor: pointer;
+        }
+        .transition-item button:hover {
+             background-color: #dc2626; /* red-600 */
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+            vertical-align: text-bottom;
+            margin-left: 0.25em;
+        }
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
+        .suggestion-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 0.5rem;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+        }
+        .suggestion-list li {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .suggestion-list li:last-child {
+            border-bottom: none;
+        }
+        .suggestion-list li:hover {
+            background-color: #f0f9ff; /* light sky blue */
+        }
+
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <div class="control-panel h-[40vh] md:h-auto w-full md:w-80 lg:w-96 bg-white shadow-lg order-2 md:order-1">
+        <div class="control-panel-content p-4 space-y-4 overflow-x-hidden">
+            
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-slate-700">NPC Emotion Weaver</h1>
+                <p class="text-xs text-slate-500">States: <span id="aspectCountDisplay">0</span></p>
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 space-y-3">
+                <h2 class="text-lg font-semibold text-slate-600">View Options</h2>
+                <div class="flex space-x-2">
+                    <button id="zoomOutButton" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1 px-3 rounded-md text-lg shadow">-</button>
+                    <button id="zoomInButton" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1 px-3 rounded-md text-lg shadow">+</button>
+                </div>
+                 <button id="centerOnNpcButton" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-md text-sm shadow mt-2">
+                    Center on NPC
+                </button>
+                <button id="resetViewButton" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-md text-sm shadow mt-1">
+                    Reset Full View
+                </button>
+                <div class="mt-2">
+                    <label class="label-cbx text-sm font-medium text-slate-700">
+                        <input type="checkbox" id="toggleRingsCheckbox" class="invisible">
+                        <div class="checkbox">
+                            <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                <polyline points="4 11 8 15 16 6"></polyline>
+                            </svg>
+                        </div>
+                        <span>Show Distance Rings</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="label-cbx text-sm font-medium text-slate-700">
+                        <input type="checkbox" id="toggleGridCheckbox" class="invisible">
+                        <div class="checkbox">
+                            <svg width="20px" height="20px" viewBox="0 0 20 20">
+                                <path d="M3,1 L17,1 L17,1 C18.1045695,1 19,1.8954305 19,3 L19,17 L19,17 C19,18.1045695 18.1045695,19 17,19 L3,19 L3,19 C1.8954305,19 1,18.1045695 1,17 L1,3 L1,3 C1,1.8954305 1.8954305,1 3,1 Z"></path>
+                                <polyline points="4 11 8 15 16 6"></polyline>
+                            </svg>
+                        </div>
+                        <span>Enable Grid Snapping</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 space-y-2">
+                <h2 class="text-lg font-semibold text-slate-600">Emotional State Controls</h2>
+                <button id="addAspectButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
+                    Add Emotional State
+                </button>
+                <button id="undeleteAspectButton" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out" disabled>
+                    Undelete Last State
+                </button>
+                 <button id="clearMapButton" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
+                    Clear Entire Map
+                </button>
+            </div>
+            
+            <div class="pt-4 border-t border-slate-200 space-y-3">
+                <button id="toggleVocabularyButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
+                    Show Starter Vocabulary
+                </button>
+                <div id="starterVocabularyContainer" class="hidden space-y-3 pt-2">
+                    <div>
+                        <h4 class="font-semibold text-sm text-slate-600 mb-2">🎭 CORE EMOTIONS (NPC's Base Mood)</h4>
+                        <div id="vocab-core_emotions" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm text-slate-600 mb-2">🎯 MOTIVATIONS (Drives & Goals)</h4>
+                        <div id="vocab-motivations" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm text-slate-600 mb-2">⚡ TRIGGERS (Events causing shifts)</h4>
+                        <div id="vocab-triggers" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm text-slate-600 mb-2">⚔️ INTERNAL CONFLICTS (Dilemmas)</h4>
+                        <div id="vocab-conflicts" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm text-slate-600 mb-2">📈 NARRATIVE ARCS (Emotional Journeys)</h4>
+                        <div id="vocab-arcs" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm text-slate-600 mb-2">📍 PLOT-POINT LINKS (Story Beats)</h4>
+                        <div id="vocab-plot_points" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectedAspectControls" class="space-y-3 hidden pt-4 border-t border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-600">Edit State: <span id="selectedAspectName" class="font-normal"></span></h2>
+                <div><label for="aspectText" class="block text-sm font-medium text-slate-700">Text Label:</label><input type="text" id="aspectText" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
+                <div><label for="aspectSize" class="block text-sm font-medium text-slate-700">Size (Intensity): <span id="aspectSizeValue">50</span></label><input type="range" id="aspectSize" min="15" max="100" value="50" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"></div>
+                <div><label class="block text-sm font-medium text-slate-700">Color (Emotional Tone):</label><div id="colorPalette" class="mt-1 grid grid-cols-6 gap-1"></div></div>
+                <div id="connectionControls"><label class="block text-sm font-medium text-slate-700">Connection to NPC Core:</label><div class="mt-1 flex space-x-2"><button id="solidLineButton" data-line-type="solid" class="line-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Solid</button><button id="dashedLineButton" data-line-type="dashed" class="line-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Dashed</button><button id="noLineButton" data-line-type="none" class="line-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">None</button></div></div>
+                <div><label class="block text-sm font-medium text-slate-700">Aura Symbol (Modifier):</label><div id="auraSymbols" class="mt-1 grid grid-cols-5 gap-1"></div></div>
+                <div><label class="block text-sm font-medium text-slate-700">Waveform (Volatility):</label><div class="mt-1 flex items-center space-x-2"><button id="resonanceWaveButton" data-wave-type="sine" class="wave-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Stable (Sine)</button><button id="dissonanceWaveButton" data-wave-type="sawtooth" class="wave-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Volatile (Saw)</button></div><div class="mt-2 flex items-center space-x-2"><button id="noWaveButton" data-wave-type="none" class="wave-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">No Waveform</button></div><label for="waveAmplitude" class="block text-xs font-medium text-slate-700 mt-2">Amplitude: <span id="waveAmplitudeValue">10</span></label><input type="range" id="waveAmplitude" min="5" max="30" value="10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"></div>
+                
+                <div class="pt-2 space-y-1">
+                     <button id="elaborateStateButton" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm flex items-center justify-center">
+                        ✨ Elaborate on State <span class="loading-spinner hidden ml-2"></span>
+                    </button>
+                    <button id="suggestDialogueButton" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm flex items-center justify-center">
+                        ✨ Suggest Dialogue Snippet <span class="loading-spinner hidden ml-2"></span>
+                    </button>
+                </div>
+
+                <!-- Transitions Section -->
+                <div class="pt-3 border-t border-slate-200 space-y-2">
+                    <h3 class="text-md font-semibold text-slate-600">State Transitions</h3>
+                    <div>
+                        <label for="transitionTargetAspect" class="block text-sm font-medium text-slate-700">Target State:</label>
+                        <select id="transitionTargetAspect" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="">Select target state...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="transitionLabel" class="block text-sm font-medium text-slate-700">Transition Label (e.g., Trigger/Cause):</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="transitionLabel" placeholder="e.g., Player fails quest" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <button id="suggestTransitionLabelsButton" class="mt-1 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-2.5 rounded-lg shadow text-sm flex items-center justify-center" title="Suggest Labels">
+                                ✨<span class="loading-spinner hidden ml-1"></span>
+                            </button>
+                        </div>
+                         <ul id="transitionLabelSuggestions" class="suggestion-list hidden"></ul>
+                    </div>
+                    <button id="addTransitionButton" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm">Add Transition</button>
+                    <div id="currentTransitionsList" class="space-y-1 mt-2">
+                        <!-- Transitions will be listed here -->
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 pt-2">
+                    <button id="bringToFrontButton" class="w-full bg-slate-500 hover:bg-slate-600 text-white font-semibold py-1 px-3 rounded-lg shadow-sm transition duration-150 ease-in-out text-sm">
+                        Bring to Front
+                    </button>
+                    <button id="sendToBackButton" class="w-full bg-slate-500 hover:bg-slate-600 text-white font-semibold py-1 px-3 rounded-lg shadow-sm transition duration-150 ease-in-out text-sm">
+                        Send to Back
+                    </button>
+                </div>
+
+                <button id="deleteAspectButton" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out mt-2">Delete State</button>
+            </div>
+
+            <div id="npcCoreControls" class="space-y-3 hidden pt-4 border-t border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-600">Edit NPC Core Node</h2>
+                <div><label class="block text-sm font-medium text-slate-700">Color (Base Emotional Tone):</label><div id="npcCoreColorPalette" class="mt-1 grid grid-cols-6 gap-1"></div></div>
+                <div><label for="npcCoreText" class="block text-sm font-medium text-slate-700">NPC Name / Identifier:</label><input type="text" id="npcCoreText" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 space-y-3">
+                <h2 class="text-lg font-semibold text-slate-600">Map Data & Profile</h2>
+                <button id="generateProfileButton" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow mb-2 flex items-center justify-center">
+                    ✨ Generate NPC Emotional Profile <span class="loading-spinner hidden ml-2"></span>
+                </button>
+                <button id="saveMapButton" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
+                    Save Map (JSON)
+                </button>
+                <div>
+                    <label for="loadMapInput" class="block text-sm font-medium text-slate-700 mb-1">Load Map (JSON):</label>
+                    <input type="file" id="loadMapInput" accept=".json" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                </div>
+                <h2 class="text-lg font-semibold text-slate-600 mt-3">Export Map</h2>
+                <button id="exportPngButton" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
+                    Export as PNG
+                </button>
+                <button id="exportSvgButton" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg shadow mt-2">
+                    Export as SVG
+                </button>
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 space-y-3">
+                <h2 class="text-lg font-semibold text-slate-600">Help & Information</h2>
+                <button id="apiKeyButton" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg shadow">
+                    API Key Settings
+                </button>
+                <button id="quickHelpButton" class="w-full bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-semibold py-2 px-4 rounded-lg shadow mt-2">
+                    Quick Help
+                </button>
+                <a href="#" id="learnMoreButton" class="block w-full text-center bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow mt-2">
+                    Learn More (Coming Soon)
+                </a>
+            </div>
+
+            <!-- New Usage & Donations Section -->
+            <div class="pt-4 border-t border-slate-200 space-y-3">
+                <h2 class="text-lg font-semibold text-slate-600">Usage & Donations</h2>
+                <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-md border border-slate-200">
+                    This tool is free to use for any non-commercial purpose. If you find it useful, please consider supporting my work with a donation.
+                    <br><br>
+                    For any other use, including commercial projects, a license is required. Please reach out to me at <a href="mailto:hello@thorstenbecker.de" class="text-indigo-600 hover:underline font-medium">hello@thorstenbecker.de</a>.
+                </p>
+                <a href="https://ko-fi.com/thorstenbecker" target="_blank" rel="noopener noreferrer" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center text-base">
+                    <span class="font-sans">$</span>
+                    <span class="ml-2">Donate</span>
+                </a>
+            </div>
+            <!-- End of New Section -->
+
+        </div>
+        <div id="copyrightNotice" class="control-panel-footer"></div>
+    </div>
+
+    <div class="flex-1 p-4 order-1 md:order-2 flex justify-center items-center">
+        <div class="canvas-container shadow-xl">
+             <canvas id="backgroundCanvas" class="bg-white"></canvas>
+             <canvas id="npcWeaverCanvas" class="bg-transparent"></canvas>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeApiKeyModalButton">&times;</span>
+            <h3 class="text-xl font-semibold mb-4">Google AI API Key</h3>
+            <p class="text-sm text-slate-600 mb-3">To use the AI features, you need a free API key from Google AI Studio.</p>
+            <div>
+                <label for="apiKeyInput" class="block text-sm font-medium text-slate-700">Your API Key:</label>
+                <input type="password" id="apiKeyInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Enter your API key">
+            </div>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sm text-indigo-600 hover:underline mt-2 inline-block">Get your API key from Google AI Studio &rarr;</a>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="apiKeyCancelButton" class="bg-gray-300 hover:bg-gray-400 text-slate-700 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button>
+                <button id="apiKeySaveButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Text Input Modal -->
+    <div id="textInputModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeModalButton">&times;</span><h3 id="modalTitle" class="text-xl font-semibold mb-4">Enter Text</h3><input type="text" id="modalTextInput" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"><button id="modalSaveButton" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow">Save</button></div></div>
+    <!-- Message Modal -->
+    <div id="messageModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeMessageModalButton">&times;</span><h3 id="messageModalTitle" class="text-xl font-semibold mb-2">Notification</h3><p id="messageModalText" class="text-sm text-slate-700"></p><button id="messageModalOkButton" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">OK</button></div></div>
+    <!-- Narrative/Profile/Elaboration Modal (Consolidated) -->
+    <div id="generatedContentModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeGeneratedContentModalButton">&times;</span><h3 id="generatedContentModalTitle" class="text-xl font-semibold mb-4">Generated Content</h3><textarea id="generatedContentModalTextarea" readonly class="w-full min-h-[200px] md:min-h-[300px] p-2 border border-slate-300 rounded-md"></textarea><div class="flex justify-end space-x-2 mt-4"><button id="generatedContentModalCopyButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">Copy to Clipboard</button><button id="generatedContentModalCloseButton" class="bg-gray-300 hover:bg-gray-400 text-slate-700 font-semibold py-2 px-4 rounded-lg shadow">Close</button></div></div></div>
+    <!-- Quick Help Modal -->
+    <div id="quickHelpModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeQuickHelpModalButton">&times;</span><h3 class="text-xl font-semibold mb-4">Quick Help - NPC Emotion Weaver</h3><div id="quickHelpContent" class="text-sm text-slate-700 help-modal-content space-y-4">
+    <p><strong>NPC Emotion Weaver</strong> is a visual tool for designing and mapping the emotional states of Non-Player Characters (NPCs). Inspired by the Fuzzy Emotion Mapping System (FEMS), it helps you externalize and explore an NPC's internal landscape by visualizing how their emotions relate, resonate, and shift. This version is enhanced with AI-powered features to assist in character development.</p>
+    
+    <div>
+        <h4 class="font-semibold text-base text-slate-800">Core Concepts</h4>
+        <p>The map is built from a few key visual elements:</p>
+        <ul class="list-disc list-inside ml-4 mt-2 space-y-1">
+            <li><strong>NPC Core Node:</strong> The central gray circle labeled "NPC" represents the character's core self or current emotional state. All other emotional states radiate from this center.</li>
+            <li><strong>Emotional States (Aspects):</strong> Each colored circle is an "Aspect"—a specific emotional influence, memory, motivation, or mood.</li>
+            <li><strong>Transitions:</strong> Arrows drawn between Emotional States represent the flow and triggers that cause an NPC's emotions to shift from one state to another.</li>
+        </ul>
+    </div>
+
+    <div>
+        <h4 class="font-semibold text-base text-slate-800">Reading the Visual Language of the Map</h4>
+        <p>Each property of an Emotional State has a specific meaning, allowing you to understand the NPC's inner world at a glance.</p>
+        <ul class="list-disc list-inside ml-4 mt-2 space-y-1">
+            <li><strong>Text Label:</strong> The name of the emotion, thought, or influence (e.g., "Resentful," "Hopeful," "Loyalty to the Crown").</li>
+            <li><strong>Size (Intensity):</strong> The size of a circle indicates its emotional intensity. A larger circle feels more present and strong, while a smaller one is more subtle or in the background.</li>
+            <li><strong>Distance from Core (Relevance):</strong> A state's distance from the central NPC Core shows its relevance. Closer states are more pressing and active, while farther states are more distant, repressed, or less conscious.</li>
+            <li><strong>Color (Emotional Tone):</strong> Colors represent the fundamental emotional tone of a state, based on a fixed palette for consistency.
+                <ul class="list-disc list-inside ml-6">
+                    <li><strong>Green:</strong> Grounded, safe, calm, or healing.</li>
+                    <li><strong>Yellow:</strong> Alertness, curiosity, tension, or new ideas.</li>
+                    <li><strong>Red:</strong> Stress, conflict, pressure, or overwhelm.</li>
+                    <li><strong>Gray:</strong> Numbness, confusion, or disconnection.</li>
+                    <li><strong>Blue:</strong> Calm, reflection, peace, or insight.</li>
+                    <li><strong>Purple:</strong> Deep or complex feelings like awe, grief, or transformation.</li>
+                </ul>
+            </li>
+            <li><strong>Connection to NPC Core:</strong> The line connecting a state to the NPC Core shows its influence.
+                <ul class="list-disc list-inside ml-6">
+                    <li><strong>Solid Line:</strong> A strong, clear influence.</li>
+                    <li><strong>Dashed Line:</strong> A subtle, weaker, or uncertain connection.</li>
+                </ul>
+            </li>
+            <li><strong>Aura Symbol (Modifier):</strong> Optional symbols add another layer of meaning to a state.
+                 <ul class="list-disc list-inside ml-6">
+                    <li><strong>🔒 Blocked:</strong> The emotion is suppressed or inaccessible.</li>
+                    <li><strong>🌀 Spiraling:</strong> The emotion is obsessive or stuck in a loop.</li>
+                    <li><strong>💧 Fading (Softening in FEMS):</strong> The emotion is diminishing or easing.</li>
+                    <li><strong>🌱 Emerging (Growth in FEMS):</strong> The emotion is new, developing, or growing.</li>
+                    <li><strong>🪨 Fixed:</strong> The emotion is deeply ingrained, stubborn, or feels unchangeable.</li>
+                    <li><strong>⚡ Conflicted:</strong> The NPC has internal conflicts about this state.</li>
+                </ul>
+            </li>
+             <li><strong>Waveform (Volatility/Resonance):</strong> A waveform shows the internal "feel" of an emotion. The amplitude (height) of the wave indicates how strongly this is felt.
+                <ul class="list-disc list-inside ml-6">
+                    <li><strong>Stable (Sine Wave):</strong> Represents emotional resonance; a smooth, stable feeling.</li>
+                    <li><strong>Volatile (Sawtooth Wave):</strong> Represents emotional dissonance; a sharp, jarring, or unstable feeling.</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    
+    <div>
+        <h4 class="font-semibold text-base text-slate-800">Key Features & Interactions</h4>
+        <ul class="list-disc list-inside ml-4 mt-2 space-y-1">
+            <li><strong>Basic Interaction:</strong>
+                <ul class="list-disc list-inside ml-6">
+                    <li><strong>Pan:</strong> Click and drag the background to move around the map.</li>
+                    <li><strong>Zoom:</strong> Use the mouse wheel or the <strong>+</strong> / <strong>-</strong> buttons to zoom in and out.</li>
+                    <li><strong>Edit Text:</strong> Double-click any state (or the NPC Core) to quickly edit its text label.</li>
+                </ul>
+            </li>
+            <li><strong>Emotional State Controls:</strong>
+                 <ul class="list-disc list-inside ml-6">
+                    <li><strong>Add Emotional State:</strong> Creates a new state on the map.</li>
+                    <li><strong>Starter Vocabulary:</strong> Use the "Show Starter Vocabulary" button to access lists of emotions, motivations, and triggers to help you get started.</li>
+                    <li><strong>Edit Panel:</strong> Click on a state to select it. The panel on the left will update to show all of its properties (text, size, color, etc.) for you to edit.</li>
+                </ul>
+            </li>
+            <li><strong>AI-Powered Assistance (✨):</strong>
+                <ul class="list-disc list-inside ml-6">
+                    <li><i>Requires a Google AI API Key, which can be set in the "API Key Settings" menu.</i></li>
+                    <li><strong>Elaborate on State:</strong> The AI provides deeper insight into a selected emotion, describing potential internal thoughts and observable behaviors.</li>
+                    <li><strong>Suggest Dialogue Snippet:</strong> The AI generates a sample line of dialogue that the NPC might say while in the selected emotional state.</li>
+                    <li><strong>Generate NPC Emotional Profile:</strong> The AI provides a holistic summary of the entire map, identifying patterns, core conflicts, and potential narrative arcs.</li>
+                    <li><strong>Suggest Transition Labels:</strong> When creating a transition between two states, the AI can suggest potential triggers or causes for that specific emotional shift.</li>
+                </ul>
+            </li>
+             <li><strong>Data Management:</strong>
+                <ul class="list-disc list-inside ml-6">
+                    <li><strong>Save/Load Map:</strong> You can save your entire map as a <code>.json</code> file to your computer and load it back into the tool later.</li>
+                    <li><strong>Export as PNG/SVG:</strong> Export a static image of your current map view for use in documents, presentations, or other tools.</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div><button id="quickHelpModalCloseButton" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">OK</button></div></div>
+    <!-- Confirm Clear Modal -->
+    <div id="confirmClearModal" class="modal">
+        <div class="modal-content">
+            <h3 id="confirmClearModalTitle" class="text-xl font-semibold mb-4">Confirm Action</h3>
+            <p id="confirmClearModalText" class="text-sm text-slate-700 mb-6">Are you sure you want to clear the entire map? This action cannot be undone.</p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirmClearCancelButton" class="bg-gray-300 hover:bg-gray-400 text-slate-700 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button>
+                <button id="confirmClearOkButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Clear Map</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+        // --- Canvas Setup ---
+        const npcWeaverCanvas = document.getElementById('npcWeaverCanvas'); 
+        const ctx = npcWeaverCanvas.getContext('2d');
+        const backgroundCanvas = document.getElementById('backgroundCanvas');
+        const backgroundCtx = backgroundCanvas.getContext('2d');
+        let canvasContainer = npcWeaverCanvas.parentElement;
+
+        // --- DOM Elements ---
+        const addAspectButton = document.getElementById('addAspectButton'); 
+        const undeleteAspectButton = document.getElementById('undeleteAspectButton');
+        const clearMapButton = document.getElementById('clearMapButton');
+        const aspectCountDisplay = document.getElementById('aspectCountDisplay');
+        const selectedAspectControls = document.getElementById('selectedAspectControls');
+        const npcCoreControls = document.getElementById('npcCoreControls'); 
+        const aspectText = document.getElementById('aspectText');
+        const aspectSize = document.getElementById('aspectSize');
+        const aspectSizeValue = document.getElementById('aspectSizeValue');
+        const colorPaletteContainer = document.getElementById('colorPalette');
+        const npcCoreColorPaletteContainer = document.getElementById('npcCoreColorPalette'); 
+        const auraSymbolsContainer = document.getElementById('auraSymbols');
+        const waveAmplitude = document.getElementById('waveAmplitude');
+        const waveAmplitudeValue = document.getElementById('waveAmplitudeValue');
+        const deleteAspectButton = document.getElementById('deleteAspectButton');
+        const selectedAspectName = document.getElementById('selectedAspectName');
+        const npcCoreText = document.getElementById('npcCoreText'); 
+        const bringToFrontButton = document.getElementById('bringToFrontButton');
+        const sendToBackButton = document.getElementById('sendToBackButton');
+        const toggleRingsCheckbox = document.getElementById('toggleRingsCheckbox');
+        const toggleGridCheckbox = document.getElementById('toggleGridCheckbox');
+        const resetViewButton = document.getElementById('resetViewButton');
+        const centerOnNpcButton = document.getElementById('centerOnNpcButton'); 
+        const zoomInButton = document.getElementById('zoomInButton');
+        const zoomOutButton = document.getElementById('zoomOutButton');
+        
+        // Gemini Feature Buttons
+        const generateProfileButton = document.getElementById('generateProfileButton');
+        const elaborateStateButton = document.getElementById('elaborateStateButton');
+        const suggestDialogueButton = document.getElementById('suggestDialogueButton');
+        const suggestTransitionLabelsButton = document.getElementById('suggestTransitionLabelsButton');
+        const transitionLabelSuggestionsUl = document.getElementById('transitionLabelSuggestions');
+
+
+        const generatedContentModal = document.getElementById('generatedContentModal');
+        const closeGeneratedContentModalButton = document.getElementById('closeGeneratedContentModalButton');
+        const generatedContentModalTitle = document.getElementById('generatedContentModalTitle');
+        const generatedContentModalTextarea = document.getElementById('generatedContentModalTextarea');
+        const generatedContentModalCopyButton = document.getElementById('generatedContentModalCopyButton');
+        const generatedContentModalCloseButton = document.getElementById('generatedContentModalCloseButton');
+        
+        const quickHelpButton = document.getElementById('quickHelpButton');
+        const quickHelpModal = document.getElementById('quickHelpModal');
+        const closeQuickHelpModalButton = document.getElementById('closeQuickHelpModalButton');
+        const quickHelpModalCloseButton = document.getElementById('quickHelpModalCloseButton');
+        const copyrightNoticeDiv = document.getElementById('copyrightNotice');
+        const saveMapButton = document.getElementById('saveMapButton');
+        const loadMapInput = document.getElementById('loadMapInput');
+        const exportPngButton = document.getElementById('exportPngButton');
+        const exportSvgButton = document.getElementById('exportSvgButton');
+        const textInputModal = document.getElementById('textInputModal');
+        const closeModalButton = document.getElementById('closeModalButton');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTextInput = document.getElementById('modalTextInput');
+        const modalSaveButton = document.getElementById('modalSaveButton');
+        const messageModal = document.getElementById('messageModal');
+        const closeMessageModalButton = document.getElementById('closeMessageModalButton');
+        const messageModalTitle = document.getElementById('messageModalTitle');
+        const messageModalText = document.getElementById('messageModalText');
+        const messageModalOkButton = document.getElementById('messageModalOkButton');
+        const confirmClearModal = document.getElementById('confirmClearModal');
+        const confirmClearOkButton = document.getElementById('confirmClearOkButton');
+        const confirmClearCancelButton = document.getElementById('confirmClearCancelButton');
+        const toggleVocabularyButton = document.getElementById('toggleVocabularyButton');
+        const starterVocabularyContainer = document.getElementById('starterVocabularyContainer');
+        const transitionTargetAspectSelect = document.getElementById('transitionTargetAspect');
+        const transitionLabelInput = document.getElementById('transitionLabel');
+        const addTransitionButton = document.getElementById('addTransitionButton');
+        const currentTransitionsListDiv = document.getElementById('currentTransitionsList');
+        const apiKeyButton = document.getElementById('apiKeyButton');
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        const closeApiKeyModalButton = document.getElementById('closeApiKeyModalButton');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiKeySaveButton = document.getElementById('apiKeySaveButton');
+        const apiKeyCancelButton = document.getElementById('apiKeyCancelButton');
+
+        const lineTypeButtons = document.querySelectorAll('.line-type-button');
+        const waveTypeButtons = document.querySelectorAll('.wave-type-button');
+
+        // --- Configuration ---
+        const FEMS_COLORS = { 
+            GREEN: { value: '#4ade80', name: 'Positive, Stable', tooltip: 'Contentment, joy, hope, calm' }, 
+            YELLOW: { value: '#facc15', name: 'Anticipation, Active', tooltip: 'Excitement, anxiety, curiosity, alert' }, 
+            RED: { value: '#f87171', name: 'Negative, Intense', tooltip: 'Anger, fear, distress, aggression' }, 
+            GRAY: { value: '#9ca3af', name: 'Neutral, Subdued', tooltip: 'Apathy, confusion, numbness, thoughtful' }, 
+            BLUE: { value: '#60a5fa', name: 'Reflective, Sorrowful', tooltip: 'Sadness, disappointment, contemplation' }, 
+            PURPLE: { value: '#c084fc', name: 'Complex, Deep', tooltip: 'Ambivalence, obsession, profound realization' } 
+        };
+        const AURA_SYMBOLS = { 
+            BLOCKED: { symbol: '🔒', name: 'Blocked', tooltip: 'Emotion is suppressed or inaccessible' }, 
+            SPIRALING: { symbol: '🌀', name: 'Spiraling', tooltip: 'Emotion is obsessive or runaway' }, 
+            FADING: { symbol: '💧', name: 'Fading', tooltip: 'Emotion is diminishing' }, 
+            EMERGING: { symbol: '🌱', name: 'Emerging', tooltip: 'Emotion is developing or new' }, 
+            FIXED: { symbol: '🪨', name: 'Fixed', tooltip: 'Emotion is stubborn or deeply ingrained' }, 
+            CONFLICTED: { symbol: '⚡', name: 'Conflicted', tooltip: 'Internally conflicted about this emotion' },
+            NONE: { symbol: ' ', name: 'None', tooltip: 'No aura symbol'} 
+        };
+        const NPC_CORE_DEFAULT_RADIUS = 60; 
+        const NPC_CORE_DEFAULT_COLOR = FEMS_COLORS.GRAY.value; 
+        const NPC_CORE_DEFAULT_TEXT = 'NPC';
+        const ASPECT_DEFAULT_RADIUS = 40; 
+        const ASPECT_DEFAULT_COLOR = FEMS_COLORS.YELLOW.value;
+        const GRID_SIZE = 25; 
+        const CONCENTRIC_RING_RADII = [120, 240, 360];
+        
+        const STARTER_VOCABULARY = {
+            core_emotions: ["Joyful", "Angry", "Fearful", "Sad", "Curious", "Confident", "Suspicious", "Hopeful", "Resentful", "Determined"],
+            motivations: ["Power", "Survival", "Love", "Revenge", "Knowledge", "Wealth", "Acceptance", "Justice", "Freedom", "Protect Loved One"],
+            triggers: ["Betrayal", "Threat", "Insult", "Kindness", "Discovery", "Loss", "Success", "Failure", "Rumor", "Player Action"],
+            conflicts: ["Duty vs. Desire", "Fear vs. Ambition", "Loyalty vs. Morality", "Past Trauma vs. Present Goal", "Love vs. Hate"],
+            arcs: ["Redemption", "Corruption", "Vengeance Fulfilled", "Coming of Age", "Finding Peace", "Descent into Madness", "Overcoming Fear"],
+            plot_points: ["Receives Quest Item", "Witnesses Key Event", "Loses Ally", "Gains Rival", "Makes Difficult Choice", "Learns Secret", "Faces Antagonist"]
+        };
+
+        const FONT_SIZE_STANDARD = 12; const MAX_SCALED_FONT_SIZE = 18; const FONT_SCALING_DIVISOR = 3.5; const MAX_TEXT_WIDTH_FACTOR = 1.7;
+        const MIN_ZOOM = 0.2; const MAX_ZOOM = 3.0; const ZOOM_SENSITIVITY = 0.001; const ZOOM_BUTTON_FACTOR = 1.2;
+        const TRANSITION_ARROW_COLOR = '#334155'; 
+        const TRANSITION_LABEL_COLOR = '#475569'; 
+
+        // --- State Management ---
+        const state = {
+            apiKey: "",
+            npcCore: { id: 'npcCore', text: NPC_CORE_DEFAULT_TEXT, x: 0, y: 0, radius: NPC_CORE_DEFAULT_RADIUS, color: NPC_CORE_DEFAULT_COLOR, isNpcCore: true, aura: null, waveform: null }, 
+            aspects: [], 
+            selectedCircleId: null,
+            draggingCircleId: null,
+            dragOffset: { x: 0, y: 0 },
+            nextAspectId: 0,
+            lastDeletedAspect: null,
+            view: {
+                scale: 1.0,
+                panX: 0,
+                panY: 0,
+                isPanning: false,
+                lastPanCoord: { x: 0, y: 0 },
+                showRings: true,
+                showGrid: false,
+            },
+            ui: {
+                lastTapTime: 0,
+                isPinching: false,
+                initialPinchDistance: 0,
+                isPerformingCriticalOperation: false,
+                hasShownNpcRenameWarning: false,
+                hasShownClusterWarning: false,
+                currentEditingCircleForModal: null,
+                isLLMLoading: false,
+            }
+        };
+
+        // --- API Key Management ---
+        function saveApiKey(key) {
+            try {
+                localStorage.setItem('npcWeaverApiKey', key);
+                state.apiKey = key;
+                showMessage("Success", "API Key saved successfully.");
+            } catch (e) {
+                console.error("Could not save API key to localStorage:", e);
+                showMessage("Error", "Could not save API key. Your browser might have localStorage disabled.");
+            }
+        }
+
+        function loadApiKey() {
+            try {
+                const savedKey = localStorage.getItem('npcWeaverApiKey');
+                if (savedKey) {
+                    state.apiKey = savedKey;
+                    console.log("API Key loaded from localStorage.");
+                }
+            } catch (e) {
+                console.error("Could not load API key from localStorage:", e);
+            }
+        }
+        
+        function getApiKey() {
+            return state.apiKey || "";
+        }
+
+        // --- Helper Functions ---
+        const getSelectedCircle = () => {
+            if (!state.selectedCircleId) return null;
+            if (state.selectedCircleId === 'npcCore') return state.npcCore; 
+            return state.aspects.find(a => a.id === state.selectedCircleId);
+        };
+        const getDraggingCircle = () => {
+            if (!state.draggingCircleId) return null;
+            return state.aspects.find(a => a.id === state.draggingCircleId);
+        };
+        function setCopyright() { const currentYear = new Date().getFullYear(); copyrightNoticeDiv.innerHTML = `&copy; ${currentYear} NPC Emotion Weaver. Inspired by FEMS by Thorsten Becker. AI features by Gemini.`;}
+        
+        // --- Gemini API Integration ---
+        async function callGemini(prompt, isJsonOutput = false) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showMessage("API Key Required", "Please set your Google AI API key in the settings to use this feature.");
+                apiKeyModal.style.display = 'block';
+                return null;
+            }
+
+            const buttonLoadingStates = {
+                [generateProfileButton.id]: generateProfileButton.querySelector('.loading-spinner'),
+                [elaborateStateButton.id]: elaborateStateButton.querySelector('.loading-spinner'),
+                [suggestDialogueButton.id]: suggestDialogueButton.querySelector('.loading-spinner'),
+                [suggestTransitionLabelsButton.id]: suggestTransitionLabelsButton.querySelector('.loading-spinner'),
+            };
+            
+            let activeLoadingSpinner = null;
+            // Determine which button triggered the call to show its spinner
+            if (document.activeElement && buttonLoadingStates[document.activeElement.id]) {
+                activeLoadingSpinner = buttonLoadingStates[document.activeElement.id];
+            } else if (state.ui.lastGeminiButtonId && buttonLoadingStates[state.ui.lastGeminiButtonId]) { // Fallback if activeElement isn't set fast enough
+                 activeLoadingSpinner = buttonLoadingStates[state.ui.lastGeminiButtonId];
+            }
+
+
+            if (activeLoadingSpinner) activeLoadingSpinner.classList.remove('hidden');
+            state.ui.isLLMLoading = true;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+            };
+
+            if (isJsonOutput) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    // Basic schema for a list of strings (transition labels)
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: { type: "STRING" }
+                    }
+                };
+            }
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    console.error("Gemini API Error Response:", result);
+                    const errorDetails = result.error?.message || `HTTP ${response.status} ${response.statusText}`;
+                    showMessage("API Error", `Failed to call Gemini API. Details: ${errorDetails}`);
+                    return null;
+                }
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    if (isJsonOutput) {
+                        try {
+                            return JSON.parse(rawText);
+                        } catch (e) {
+                            console.error("Error parsing JSON from Gemini:", e, "\nRaw text:", rawText);
+                            showMessage("API Error", "Received invalid JSON from AI. Check console.");
+                            return null;
+                        }
+                    }
+                    return rawText;
+                } else {
+                    console.error("Unexpected Gemini API response structure:", result);
+                    showMessage("API Error", "Received unexpected or empty data from AI. Check console for the full response.");
+                    return null;
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                showMessage("Network Error", `Could not connect to Gemini API: ${error.message}`);
+                return null;
+            } finally {
+                if (activeLoadingSpinner) activeLoadingSpinner.classList.add('hidden');
+                state.ui.isLLMLoading = false;
+                state.ui.lastGeminiButtonId = null; 
+            }
+        }
+
+
+        // --- Core Application Logic (Drawing, Interaction, etc.) ---
+        function resetNpcCoreToDefaults() { 
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const logicalCanvasWidth = npcWeaverCanvas.width / devicePixelRatio;
+            const logicalCanvasHeight = npcWeaverCanvas.height / devicePixelRatio;
+            state.npcCore.text = NPC_CORE_DEFAULT_TEXT;
+            state.npcCore.color = NPC_CORE_DEFAULT_COLOR;
+            state.npcCore.radius = NPC_CORE_DEFAULT_RADIUS;
+            state.npcCore.x = logicalCanvasWidth / 2;
+            state.npcCore.y = logicalCanvasHeight / 2;
+            state.npcCore.aura = null;
+            state.npcCore.waveform = null;
+        }
+        function resetViewAndNpcCore(fullReset = false) { 
+            state.view.scale = 1.0;
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const logicalCanvasWidth = npcWeaverCanvas.width / devicePixelRatio;
+            const logicalCanvasHeight = npcWeaverCanvas.height / devicePixelRatio;
+            if (fullReset) {
+                resetNpcCoreToDefaults();
+            } else {
+                state.npcCore.x = logicalCanvasWidth / 2;
+                state.npcCore.y = logicalCanvasHeight / 2;
+            }
+            state.view.panX = logicalCanvasWidth / 2 - (state.npcCore.x * state.view.scale);
+            state.view.panY = logicalCanvasHeight / 2 - (state.npcCore.y * state.view.scale);
+        }
+        function updateAspectCount() { aspectCountDisplay.textContent = state.aspects.length; }
+        
+        function resizeCanvas() { 
+            const maxWidth = 1040; const maxHeight = 780; 
+            const containerWidth = canvasContainer.clientWidth; 
+            const containerHeight = canvasContainer.clientHeight;
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const canvasWidth = Math.min(containerWidth, maxWidth);
+            const canvasHeight = Math.min(containerHeight, maxHeight);
+
+            [npcWeaverCanvas, backgroundCanvas].forEach(c => {
+                c.width = canvasWidth * devicePixelRatio;
+                c.height = canvasHeight * devicePixelRatio;
+                c.style.width = `${canvasWidth}px`;
+                c.style.height = `${canvasHeight}px`;
+            });
+
+            let isInitialLoad = (state.npcCore.x === 0 && state.npcCore.y === 0 && state.view.panX === 0 && state.view.panY === 0 && state.view.scale === 1.0); 
+            if (isInitialLoad) { 
+                resetViewAndNpcCore(true); 
+            }
+            drawAll(); 
+        }
+
+        function drawBackground() {
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            const logicalCanvasWidth = backgroundCanvas.width / devicePixelRatio;
+            const logicalCanvasHeight = backgroundCanvas.height / devicePixelRatio;
+            backgroundCtx.save();
+            backgroundCtx.scale(devicePixelRatio, devicePixelRatio);
+            backgroundCtx.clearRect(0, 0, logicalCanvasWidth, logicalCanvasHeight);
+            
+            backgroundCtx.fillStyle = 'white';
+            backgroundCtx.fillRect(0,0,logicalCanvasWidth,logicalCanvasHeight);
+            
+            backgroundCtx.translate(state.view.panX, state.view.panY);
+            backgroundCtx.scale(state.view.scale, state.view.scale);
+            if (state.view.showGrid) drawGrid();
+            if (state.view.showRings) drawConcentricRings();
+            backgroundCtx.restore();
+        }
+
+        function drawGrid() { 
+            backgroundCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)'; 
+            backgroundCtx.lineWidth = 0.5 / state.view.scale; 
+            const logicalCanvasWidth = npcWeaverCanvas.width / (window.devicePixelRatio||1); 
+            const logicalCanvasHeight = npcWeaverCanvas.height / (window.devicePixelRatio||1); 
+            const xStartWorld = (-state.view.panX)/state.view.scale; 
+            const yStartWorld = (-state.view.panY)/state.view.scale; 
+            const xEndWorld = (logicalCanvasWidth - state.view.panX)/state.view.scale; 
+            const yEndWorld = (logicalCanvasHeight - state.view.panY)/state.view.scale; 
+            const firstGridX = Math.floor(xStartWorld/GRID_SIZE)*GRID_SIZE; 
+            const firstGridY = Math.floor(yStartWorld/GRID_SIZE)*GRID_SIZE; 
+            for (let x = firstGridX; x <= xEndWorld; x += GRID_SIZE) { backgroundCtx.beginPath(); backgroundCtx.moveTo(x, yStartWorld); backgroundCtx.lineTo(x, yEndWorld); backgroundCtx.stroke(); } 
+            for (let y = firstGridY; y <= yEndWorld; y += GRID_SIZE) { backgroundCtx.beginPath(); backgroundCtx.moveTo(xStartWorld, y); backgroundCtx.lineTo(xEndWorld, y); backgroundCtx.stroke(); }
+        }
+        function drawConcentricRings() { 
+            if (!state.npcCore) return; 
+            backgroundCtx.strokeStyle = 'rgba(100,100,100,0.2)'; 
+            backgroundCtx.lineWidth = 1 / state.view.scale; 
+            backgroundCtx.setLineDash([5/state.view.scale, 5/state.view.scale]); 
+            CONCENTRIC_RING_RADII.forEach(radius => { backgroundCtx.beginPath(); backgroundCtx.arc(state.npcCore.x, state.npcCore.y, radius, 0, Math.PI * 2); backgroundCtx.stroke(); }); 
+            backgroundCtx.setLineDash([]);
+        }
+        
+        function drawCircle(circle, targetCtx = ctx) {
+            targetCtx.beginPath();
+            targetCtx.arc(circle.x, circle.y, circle.radius, 0, Math.PI*2);
+            targetCtx.fillStyle = circle.color;
+            targetCtx.fill();
+            targetCtx.strokeStyle = '#374151'; 
+            targetCtx.lineWidth = (circle.id === state.selectedCircleId && targetCtx === ctx ? 3 : 1.5)/state.view.scale;
+            targetCtx.stroke();
+
+            targetCtx.fillStyle = kontrastFarbe(circle.color);
+            targetCtx.textAlign = 'center';
+            targetCtx.textBaseline = 'middle';
+            
+            const layout = calculateTextLayout(circle.text, circle.radius, targetCtx);
+            const { fontSize, lines } = layout;
+            
+            targetCtx.font = `bold ${fontSize}px Inter, sans-serif`;
+            const lineHeight = fontSize * 1.2;
+            const totalTextHeight = lines.length * lineHeight;
+            let startY = circle.y - (totalTextHeight / 2) + (lineHeight / 2);
+
+            for (let j = 0; j < lines.length; j++) {
+                 if (lines[j].trim().length > 0) { 
+                    targetCtx.fillText(lines[j], circle.x, startY);
+                    startY += lineHeight;
+                }
+            }
+
+            if (circle.aura && circle.aura.symbol.trim() !== '') {
+                const symbolSize = fontSize * 1.5; 
+                targetCtx.font = `${symbolSize}px Inter, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif`;
+                targetCtx.fillText(circle.aura.symbol, circle.x + circle.radius*0.5, circle.y - circle.radius*0.5);
+            }
+
+            if (circle.waveform && circle.waveform.type !== 'none') {
+                drawWaveform(circle, targetCtx);
+            }
+        }
+
+        function calculateTextLayout(text, radius, context) {
+            const maxTextWidth = radius * MAX_TEXT_WIDTH_FACTOR;
+            let idealScaledFontSize = Math.min(MAX_SCALED_FONT_SIZE, Math.max(FONT_SIZE_STANDARD, radius / FONT_SCALING_DIVISOR));
+            let finalFontSize = FONT_SIZE_STANDARD;
+
+            for (let currentTestSize = Math.floor(idealScaledFontSize); currentTestSize >= FONT_SIZE_STANDARD; currentTestSize--) {
+                context.font = `bold ${currentTestSize}px Inter, sans-serif`;
+                if (context.measureText(text).width <= maxTextWidth) {
+                    finalFontSize = currentTestSize;
+                    break;
+                }
+            }
+            context.font = `bold ${finalFontSize}px Inter, sans-serif`;
+
+            const words = text.split(' ');
+            let currentLine = '';
+            const lines = [];
+
+            for (let i = 0; i < words.length; i++) {
+                let word = words[i];
+                if (context.measureText(word).width > maxTextWidth && maxTextWidth > 0) {
+                    if (currentLine.length > 0) { lines.push(currentLine.trim()); currentLine = ''; }
+                    let tempSubLine = "";
+                    for (let k = 0; k < word.length; k++) {
+                        const char = word[k];
+                        if (context.measureText(tempSubLine + char).width > maxTextWidth && tempSubLine.length > 0) {
+                            lines.push(tempSubLine); tempSubLine = char;
+                        } else { tempSubLine += char; }
+                    }
+                    if (tempSubLine.length > 0) lines.push(tempSubLine); 
+                    continue; 
+                }
+
+                const testLine = currentLine.length === 0 ? word : currentLine + ' ' + word;
+                if (context.measureText(testLine).width <= maxTextWidth) {
+                    currentLine = testLine;
+                } else {
+                    if (currentLine.length > 0) lines.push(currentLine.trim());
+                    currentLine = word; 
+                    if (context.measureText(currentLine).width > maxTextWidth) {
+                         lines.push(currentLine.trim()); currentLine = ""; 
+                    }
+                }
+            }
+            if (currentLine.length > 0) lines.push(currentLine.trim());
+            return { fontSize: finalFontSize, lines: lines };
+        }
+
+        function drawLineToNpcCore(fromCircle, toNpcCore, lineType, targetCtx = ctx) { 
+            targetCtx.beginPath(); 
+            const angle = Math.atan2(toNpcCore.y-fromCircle.y, toNpcCore.x-fromCircle.x); 
+            const startX = fromCircle.x+fromCircle.radius*Math.cos(angle); 
+            const startY = fromCircle.y+fromCircle.radius*Math.sin(angle); 
+            const endX = toNpcCore.x-toNpcCore.radius*Math.cos(angle); 
+            const endY = toNpcCore.y-toNpcCore.radius*Math.sin(angle); 
+            targetCtx.moveTo(startX, startY); 
+            targetCtx.lineTo(endX, endY); 
+            targetCtx.strokeStyle = '#374151'; 
+            targetCtx.lineWidth = 2/state.view.scale; 
+            if(lineType === 'dashed') targetCtx.setLineDash([10/state.view.scale, 5/state.view.scale]); 
+            else targetCtx.setLineDash([]); 
+            targetCtx.stroke(); 
+            targetCtx.setLineDash([]);
+        }
+        
+        function drawTransitionArrow(sourceAspect, targetAspect, label, targetCtx = ctx) {
+            const angle = Math.atan2(targetAspect.y - sourceAspect.y, targetAspect.x - sourceAspect.x);
+            const arrowLength = 15 / state.view.scale;
+            const arrowWidth = 8 / state.view.scale;
+
+            const startX = sourceAspect.x + sourceAspect.radius * Math.cos(angle);
+            const startY = sourceAspect.y + sourceAspect.radius * Math.sin(angle);
+            const endX = targetAspect.x - targetAspect.radius * Math.cos(angle);
+            const endY = targetAspect.y - targetAspect.radius * Math.sin(angle);
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(startX, startY);
+            targetCtx.lineTo(endX, endY);
+            targetCtx.strokeStyle = TRANSITION_ARROW_COLOR;
+            targetCtx.lineWidth = 1.5 / state.view.scale;
+            targetCtx.stroke();
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(endX, endY);
+            targetCtx.lineTo(endX - arrowLength * Math.cos(angle - Math.PI / 7), endY - arrowLength * Math.sin(angle - Math.PI / 7));
+            targetCtx.lineTo(endX - arrowLength * Math.cos(angle + Math.PI / 7), endY - arrowLength * Math.sin(angle + Math.PI / 7));
+            targetCtx.closePath();
+            targetCtx.fillStyle = TRANSITION_ARROW_COLOR;
+            targetCtx.fill();
+
+            if (label) {
+                const midX = (startX + endX) / 2;
+                const midY = (startY + endY) / 2;
+                const labelOffsetX = 10 / state.view.scale * Math.sin(angle); 
+                const labelOffsetY = -10 / state.view.scale * Math.cos(angle);
+
+                targetCtx.font = `italic ${Math.max(8, 10 / state.view.scale)}px Inter, sans-serif`;
+                targetCtx.fillStyle = TRANSITION_LABEL_COLOR;
+                targetCtx.textAlign = 'center';
+                targetCtx.textBaseline = 'middle';
+                targetCtx.fillText(label, midX + labelOffsetX, midY + labelOffsetY);
+            }
+        }
+
+        function drawWaveform(circle, targetCtx=ctx) {
+            if (!circle.waveform || circle.waveform.type==='none') return;
+            const {type, amplitude: rawAmplitude} = circle.waveform;
+            const A_MIN_FACTOR = 0.05; const A_MAX_FACTOR = 0.20; 
+            let min_visual_amp = circle.radius * A_MIN_FACTOR; let max_visual_amp = circle.radius * A_MAX_FACTOR;
+            min_visual_amp = Math.max(min_visual_amp, 0.5); max_visual_amp = Math.max(max_visual_amp, min_visual_amp); 
+            let effectiveAmplitude;
+            if (min_visual_amp >= max_visual_amp) { effectiveAmplitude = min_visual_amp; } else { const rawAmplitudeNormalized = (rawAmplitude - 5) / (30 - 5); effectiveAmplitude = min_visual_amp + rawAmplitudeNormalized * (max_visual_amp - min_visual_amp); }
+            effectiveAmplitude = Math.max(0, effectiveAmplitude); 
+            const waveWidth = circle.radius * 1.0; 
+            const startX = circle.x - waveWidth / 2; const endX = circle.x + waveWidth / 2;
+            const marginFromBottomEdge = circle.radius * 0.1; const baseY = circle.y + circle.radius - effectiveAmplitude - marginFromBottomEdge;
+            const waveStrokeColor = kontrastFarbe(circle.color);
+            targetCtx.beginPath(); targetCtx.moveTo(startX, baseY); 
+            targetCtx.lineWidth = Math.max(1, 1.5 / state.view.scale); targetCtx.strokeStyle = waveStrokeColor; 
+            if (type==='sine') { for (let i=startX; i<=endX; i++) { const phase = ((i-startX)/waveWidth)*Math.PI*2; targetCtx.lineTo(i, baseY - Math.sin(phase)*effectiveAmplitude); }
+            } else if (type==='sawtooth') {
+                const segments = Math.max(4, Math.floor(waveWidth / 6)); const segmentWidth = waveWidth/segments;
+                if (segmentWidth > 0 && effectiveAmplitude > 0) { for (let i=0; i<segments; i++) { targetCtx.lineTo(startX + i*segmentWidth + segmentWidth/2, baseY - effectiveAmplitude); targetCtx.lineTo(startX + (i+1)*segmentWidth, baseY); }
+                } else if (effectiveAmplitude > 0) { targetCtx.lineTo(circle.x, baseY - effectiveAmplitude); targetCtx.lineTo(circle.x, baseY); }
+            }
+            targetCtx.stroke();
+        }
+        function kontrastFarbe(hexcolor){ hexcolor = hexcolor.replace("#", ""); var r=parseInt(hexcolor.substr(0,2),16); var g=parseInt(hexcolor.substr(2,2),16); var b=parseInt(hexcolor.substr(4,2),16); var yiq=((r*299)+(g*587)+(b*114))/1000; return (yiq >= 128) ? '#000000':'#FFFFFF';}
+        
+        function drawAll() {
+            drawBackground();
+            draw();
+        }
+        
+        function draw() { 
+            const devicePixelRatio = window.devicePixelRatio||1; 
+            const logicalCanvasWidth = npcWeaverCanvas.width/devicePixelRatio; 
+            const logicalCanvasHeight = npcWeaverCanvas.height/devicePixelRatio; 
+            ctx.save(); 
+            ctx.scale(devicePixelRatio, devicePixelRatio); 
+            ctx.clearRect(0,0,logicalCanvasWidth,logicalCanvasHeight); 
+            ctx.translate(state.view.panX, state.view.panY); 
+            ctx.scale(state.view.scale, state.view.scale); 
+            
+            state.aspects.forEach(aspect => {
+                if (aspect.transitions && aspect.transitions.length > 0) {
+                    aspect.transitions.forEach(trans => {
+                        const targetAspect = state.aspects.find(a => a.id === trans.targetId);
+                        if (targetAspect) {
+                            drawTransitionArrow(aspect, targetAspect, trans.label);
+                        }
+                    });
+                }
+            });
+            
+            drawCircle(state.npcCore); 
+            state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') drawLineToNpcCore(aspect, state.npcCore, aspect.connectionToNpcCore); }); 
+            state.aspects.forEach(c => drawCircle(c)); 
+            ctx.restore(); 
+        }
+
+        function getScreenToWorldPos(screenX, screenY) { const rect = npcWeaverCanvas.getBoundingClientRect(); const logicalCanvasX = (screenX-rect.left); const logicalCanvasY = (screenY-rect.top); const worldX = (logicalCanvasX-state.view.panX)/state.view.scale; const worldY = (logicalCanvasY-state.view.panY)/state.view.scale; return {x: worldX, y: worldY};}
+        
+        function handleMouseDown(e) { 
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0); 
+            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0); 
+            const worldPos = getScreenToWorldPos(clientX, clientY); 
+            let clickedOnCircle = false; 
+            for (let i=state.aspects.length-1; i>=0; i--) { 
+                const aspect=state.aspects[i]; 
+                const dist = Math.hypot(aspect.x-worldPos.x, aspect.y-worldPos.y); 
+                if (dist <= aspect.radius) { 
+                    state.selectedCircleId = aspect.id; 
+                    state.draggingCircleId = aspect.id; 
+                    state.dragOffset.x = worldPos.x - aspect.x; 
+                    state.dragOffset.y = worldPos.y - aspect.y; 
+                    clickedOnCircle = true; 
+                    state.view.isPanning = false; 
+                    npcWeaverCanvas.classList.remove('grabbing'); 
+                    break;
+                }
+            } 
+            if (!clickedOnCircle) { 
+                const distNpcCore = Math.hypot(state.npcCore.x-worldPos.x, state.npcCore.y-worldPos.y); 
+                if (distNpcCore <= state.npcCore.radius) { 
+                    state.selectedCircleId = state.npcCore.id; 
+                    state.draggingCircleId = null; 
+                    clickedOnCircle = true; 
+                    state.view.isPanning = false; 
+                    npcWeaverCanvas.classList.remove('grabbing');
+                }
+            } 
+            if (!clickedOnCircle) { 
+                state.selectedCircleId = null; 
+                state.draggingCircleId = null; 
+                state.view.isPanning = true; 
+                const rect = npcWeaverCanvas.getBoundingClientRect(); 
+                state.view.lastPanCoord.x = clientX - rect.left; 
+                state.view.lastPanCoord.y = clientY - rect.top; 
+                npcWeaverCanvas.classList.add('grabbing');
+            } 
+            updateControls(); 
+            draw(); 
+        }
+        function handleMouseMove(e) { 
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0); 
+            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0); 
+            const draggingCircle = getDraggingCircle(); 
+            if (draggingCircle && !draggingCircle.isNpcCore) { 
+                const worldPos = getScreenToWorldPos(clientX, clientY); 
+                draggingCircle.x = worldPos.x - state.dragOffset.x; 
+                draggingCircle.y = worldPos.y - state.dragOffset.y; 
+                draw();
+            } else if (state.view.isPanning) { 
+                const rect = npcWeaverCanvas.getBoundingClientRect(); 
+                const currentScreenX = clientX - rect.left; 
+                const currentScreenY = clientY - rect.top; 
+                state.view.panX += currentScreenX - state.view.lastPanCoord.x; 
+                state.view.panY += currentScreenY - state.view.lastPanCoord.y; 
+                state.view.lastPanCoord.x = currentScreenX; 
+                state.view.lastPanCoord.y = currentScreenY; 
+                drawAll();
+            } 
+        }
+        function handleMouseUp(e) {
+            const draggingCircle = getDraggingCircle();
+            if (draggingCircle && !draggingCircle.isNpcCore) {
+                if (state.view.showGrid) {
+                    draggingCircle.x = Math.round(draggingCircle.x / GRID_SIZE) * GRID_SIZE;
+                    draggingCircle.y = Math.round(draggingCircle.y / GRID_SIZE) * GRID_SIZE;
+                }
+                checkClusterWarning(draggingCircle);
+            }
+            state.draggingCircleId = null;
+            if (state.view.isPanning) {
+                state.view.isPanning = false;
+                npcWeaverCanvas.classList.remove('grabbing');
+            }
+            draw();
+        }
+        function handleZoomAction(zoom) { const newScaleCandidate = zoom ? state.view.scale * ZOOM_BUTTON_FACTOR : state.view.scale / ZOOM_BUTTON_FACTOR; const newScale = Math.min(Math.max(newScaleCandidate, MIN_ZOOM), MAX_ZOOM); const devicePixelRatio = window.devicePixelRatio || 1; const logicalCanvasWidth = npcWeaverCanvas.width / devicePixelRatio; const logicalCanvasHeight = npcWeaverCanvas.height / devicePixelRatio; const viewCenterX = logicalCanvasWidth / 2; const viewCenterY = logicalCanvasHeight / 2; state.view.panX = viewCenterX - (viewCenterX - state.view.panX) * (newScale / state.view.scale); state.view.panY = viewCenterY - (viewCenterY - state.view.panY) * (newScale / state.view.scale); state.view.scale = newScale; drawAll(); }
+        zoomInButton.addEventListener('click', () => handleZoomAction(true)); zoomOutButton.addEventListener('click', () => handleZoomAction(false));
+        function handleWheel(e) { e.preventDefault(); const scrollDelta = e.deltaY * ZOOM_SENSITIVITY; const newScaleCandidate = state.view.scale * (1-scrollDelta); const newScale = Math.min(Math.max(newScaleCandidate, MIN_ZOOM), MAX_ZOOM); const clientX = e.clientX; const clientY = e.clientY; const rect = npcWeaverCanvas.getBoundingClientRect(); const mouseXOnCanvas = clientX - rect.left; const mouseYOnCanvas = clientY - rect.top; state.view.panX = mouseXOnCanvas - (mouseXOnCanvas - state.view.panX) * (newScale / state.view.scale); state.view.panY = mouseYOnCanvas - (mouseYOnCanvas - state.view.panY) * (newScale / state.view.scale); state.view.scale = newScale; drawAll();}
+        resetViewButton.addEventListener('click', () => { resetViewAndNpcCore(true); drawAll();}); 
+        centerOnNpcButton.addEventListener('click', () => { 
+            const devicePixelRatio = window.devicePixelRatio || 1; 
+            const logicalCanvasWidth = npcWeaverCanvas.width / devicePixelRatio; 
+            const logicalCanvasHeight = npcWeaverCanvas.height / devicePixelRatio; 
+            state.view.panX = logicalCanvasWidth / 2 - (state.npcCore.x * state.view.scale); 
+            state.view.panY = logicalCanvasHeight / 2 - (state.npcCore.y * state.view.scale); 
+            drawAll(); 
+        });
+        
+        function handleDoubleClick(e) { 
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0); 
+            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0); 
+            const worldPos = getScreenToWorldPos(clientX, clientY); 
+            let targetCircle=null; 
+            for (let i=state.aspects.length-1; i>=0; i--) { 
+                const aspect=state.aspects[i]; 
+                const dist=Math.hypot(aspect.x-worldPos.x, aspect.y-worldPos.y); 
+                if (dist <= aspect.radius) { targetCircle=aspect; break;}
+            } 
+            if (!targetCircle) { 
+                const distNpcCore=Math.hypot(state.npcCore.x-worldPos.x, state.npcCore.y-worldPos.y); 
+                if (distNpcCore <= state.npcCore.radius) targetCircle=state.npcCore;
+            } 
+            if (targetCircle) { 
+                state.ui.currentEditingCircleForModal = targetCircle; 
+                modalTitle.textContent = `Edit Text for ${targetCircle.isNpcCore ? 'NPC Core':'Emotional State'}`; 
+                modalTextInput.value = targetCircle.text; 
+                textInputModal.style.display = "block"; 
+                modalTextInput.focus(); 
+                updateControls(); 
+            } 
+        }
+        closeModalButton.onclick = () => { textInputModal.style.display = "none"; state.ui.currentEditingCircleForModal = null; };
+        modalSaveButton.onclick = () => { 
+            if (state.ui.currentEditingCircleForModal) { 
+                state.ui.currentEditingCircleForModal.text = modalTextInput.value; 
+                if (state.ui.currentEditingCircleForModal.isNpcCore) npcCoreText.value = modalTextInput.value; 
+                else if (state.selectedCircleId === state.ui.currentEditingCircleForModal.id) { 
+                    aspectText.value = modalTextInput.value; 
+                    selectedAspectName.textContent = modalTextInput.value.substring(0,20) + (modalTextInput.value.length > 20 ? '...':'');
+                } 
+                draw();
+            } 
+            textInputModal.style.display = "none"; 
+            state.ui.currentEditingCircleForModal = null;
+        };
+        closeMessageModalButton.onclick = () => messageModal.style.display = "none"; messageModalOkButton.onclick = () => messageModal.style.display = "none";
+        
+        closeGeneratedContentModalButton.onclick = () => generatedContentModal.style.display = "none"; 
+        generatedContentModalCloseButton.onclick = () => generatedContentModal.style.display = "none"; 
+        generatedContentModalCopyButton.onclick = () => { 
+            generatedContentModalTextarea.select(); 
+            document.execCommand('copy'); 
+            showMessage("Content Copied", "The generated content has been copied to your clipboard.");
+        };
+
+        closeQuickHelpModalButton.onclick = () => quickHelpModal.style.display = "none"; quickHelpModalCloseButton.onclick = () => quickHelpModal.style.display = "none"; 
+        quickHelpButton.onclick = () => { quickHelpModal.style.display = "block"; const quickHelpContentDiv = quickHelpModal.querySelector('.help-modal-content'); if (quickHelpContentDiv) quickHelpContentDiv.scrollTop = 0; };
+        
+        // --- API Key Modal Listeners ---
+        apiKeyButton.onclick = () => {
+            apiKeyInput.value = getApiKey();
+            apiKeyModal.style.display = "block";
+        };
+        closeApiKeyModalButton.onclick = () => apiKeyModal.style.display = "none";
+        apiKeyCancelButton.onclick = () => apiKeyModal.style.display = "none";
+        apiKeySaveButton.onclick = () => {
+            saveApiKey(apiKeyInput.value.trim());
+            apiKeyModal.style.display = "none";
+        };
+        
+        window.onclick = (event) => {
+            if (event.target == textInputModal) { textInputModal.style.display = "none"; state.ui.currentEditingCircleForModal = null; }
+            if (event.target == messageModal) { messageModal.style.display = "none"; }
+            if (event.target == generatedContentModal) { generatedContentModal.style.display = "none"; }
+            if (event.target == quickHelpModal) { quickHelpModal.style.display = "none"; }
+            if (event.target == confirmClearModal) { confirmClearModal.style.display = "none"; state.ui.isPerformingCriticalOperation = false; }
+            if (event.target == apiKeyModal) { apiKeyModal.style.display = "none"; }
+        };
+
+        function showMessage(title, message) { messageModalTitle.textContent = title; messageModalText.textContent = message; messageModal.style.display = "block";}
+        
+        function updateControls() {
+            const selectedCircle = getSelectedCircle();
+            if (selectedCircle) {
+                if (selectedCircle.isNpcCore) {
+                    selectedAspectControls.classList.add('hidden');
+                    npcCoreControls.classList.remove('hidden');
+                    npcCoreText.value = selectedCircle.text;
+                    npcCoreColorPaletteContainer.querySelectorAll('.color-palette-button').forEach(btn => btn.classList.toggle('selected', btn.dataset.color === selectedCircle.color));
+                } else { 
+                    npcCoreControls.classList.add('hidden');
+                    selectedAspectControls.classList.remove('hidden');
+                    selectedAspectName.textContent = selectedCircle.text.substring(0,20) + (selectedCircle.text.length > 20 ? '...':'');
+                    aspectText.value = selectedCircle.text;
+                    aspectSize.value = selectedCircle.radius;
+                    aspectSizeValue.textContent = selectedCircle.radius;
+                    colorPaletteContainer.querySelectorAll('.color-palette-button').forEach(btn => btn.classList.toggle('selected', btn.dataset.color === selectedCircle.color));
+                    lineTypeButtons.forEach(btn => { const isSelected = btn.dataset.lineType === selectedCircle.connectionToNpcCore; btn.classList.toggle('bg-blue-500',isSelected); btn.classList.toggle('text-white',isSelected); btn.classList.toggle('bg-slate-200',!isSelected); btn.classList.toggle('text-slate-700',!isSelected);});
+                    document.querySelectorAll('#auraSymbols .symbol-button').forEach(btn => btn.classList.toggle('selected', selectedCircle.aura && btn.dataset.symbolName === selectedCircle.aura.name));
+                    const wf = selectedCircle.waveform || {type:'none', amplitude:10};
+                    waveTypeButtons.forEach(btn => { const isSelected = btn.dataset.waveType === wf.type; btn.classList.toggle('bg-blue-500',isSelected); btn.classList.toggle('text-white',isSelected); btn.classList.toggle('bg-slate-200',!isSelected); btn.classList.toggle('text-slate-700',!isSelected);});
+                    waveAmplitude.value = wf.amplitude;
+                    waveAmplitudeValue.textContent = wf.amplitude;
+                    waveAmplitude.disabled = wf.type === 'none';
+                    document.getElementById('connectionControls').classList.remove('hidden');
+                    populateTransitionControls(selectedCircle);
+                    
+                    setTimeout(() => {
+                        const controlPanelContent = document.querySelector('.control-panel-content');
+                        if (selectedAspectControls.offsetTop < controlPanelContent.scrollTop || (selectedAspectControls.offsetTop + selectedAspectControls.offsetHeight) > (controlPanelContent.scrollTop + controlPanelContent.clientHeight)) {
+                            controlPanelContent.scrollTo({ top: selectedAspectControls.offsetTop - 20, behavior: 'smooth' });
+                        }
+                    }, 50); 
+                }
+            } else {
+                selectedAspectControls.classList.add('hidden');
+                npcCoreControls.classList.add('hidden');
+            }
+            toggleRingsCheckbox.checked = state.view.showRings;
+            toggleGridCheckbox.checked = state.view.showGrid;
+            undeleteAspectButton.disabled = !state.lastDeletedAspect;
+            updateAspectCount();
+        }
+
+        function populateTransitionControls(selectedAspect) {
+            transitionTargetAspectSelect.innerHTML = '<option value="">Select target state...</option>';
+            state.aspects.forEach(aspect => {
+                if (aspect.id !== selectedAspect.id) { 
+                    const option = document.createElement('option');
+                    option.value = aspect.id;
+                    option.textContent = aspect.text.substring(0, 30) + (aspect.text.length > 30 ? '...' : '');
+                    transitionTargetAspectSelect.appendChild(option);
+                }
+            });
+            transitionLabelInput.value = ''; 
+            transitionLabelSuggestionsUl.innerHTML = '';
+            transitionLabelSuggestionsUl.classList.add('hidden');
+
+
+            currentTransitionsListDiv.innerHTML = '';
+            if (selectedAspect.transitions && selectedAspect.transitions.length > 0) {
+                selectedAspect.transitions.forEach((trans, index) => {
+                    const target = state.aspects.find(a => a.id === trans.targetId);
+                    const targetName = target ? target.text.substring(0,20) + (target.text.length > 20 ? '...' : '') : 'Unknown State';
+                    const transItem = document.createElement('div');
+                    transItem.className = 'transition-item text-xs';
+                    transItem.innerHTML = `<span>&rarr; ${targetName} (${trans.label || 'No label'})</span> <button data-index="${index}">Del</button>`;
+                    currentTransitionsListDiv.appendChild(transItem);
+                });
+            } else {
+                 currentTransitionsListDiv.innerHTML = '<p class="text-xs text-slate-500">No transitions defined yet.</p>';
+            }
+        }
+        
+        currentTransitionsListDiv.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' && e.target.dataset.index) {
+                const selectedAspect = getSelectedCircle();
+                if (selectedAspect && !selectedAspect.isNpcCore && selectedAspect.transitions) {
+                    selectedAspect.transitions.splice(parseInt(e.target.dataset.index), 1);
+                    updateControls(); 
+                    draw();
+                }
+            }
+        });
+
+        addTransitionButton.addEventListener('click', () => {
+            const selectedAspect = getSelectedCircle();
+            const targetId = transitionTargetAspectSelect.value;
+            const label = transitionLabelInput.value.trim();
+
+            if (selectedAspect && !selectedAspect.isNpcCore && targetId) {
+                if (!selectedAspect.transitions) {
+                    selectedAspect.transitions = [];
+                }
+                selectedAspect.transitions.push({ targetId: targetId, label: label });
+                updateControls(); 
+                draw(); 
+            } else if (!targetId) {
+                showMessage("No Target", "Please select a target state for the transition.");
+            }
+        });
+
+
+        function doCirclesOverlap(c1, c2) { if (!c1 || !c2 || c1.id === c2.id) return false; const dist = Math.hypot(c1.x - c2.x, c1.y - c2.y); return dist < (c1.radius + c2.radius); }
+        function checkClusterWarning(movedCircle) {
+            if (state.ui.hasShownClusterWarning) return; 
+            const cluster = new Set(); const queue = [movedCircle]; const visited = new Set([movedCircle.id]);
+            while(queue.length > 0) { const current = queue.shift(); cluster.add(current); for (const other of state.aspects) { if (!visited.has(other.id) && doCirclesOverlap(current, other)) { visited.add(other.id); queue.push(other); } } }
+            if (cluster.size > 3) { showMessage('Note on Clustering', "Clustering several states closely might make the map hard to read. Consider spacing them out or using transitions to link them."); state.ui.hasShownClusterWarning = true; }
+        }
+        
+        addAspectButton.addEventListener('click', () => { 
+            const devicePixelRatio = window.devicePixelRatio||1; 
+            const logicalCanvasWidth = npcWeaverCanvas.width/devicePixelRatio; 
+            const logicalCanvasHeight = npcWeaverCanvas.height/devicePixelRatio; 
+            let initialX = (logicalCanvasWidth/2 - state.view.panX)/state.view.scale + (Math.random()-0.5)*50/state.view.scale; 
+            let initialY = (logicalCanvasHeight/2 - state.view.panY)/state.view.scale + (Math.random()-0.5)*50/state.view.scale; 
+            const newAspect = {
+                id:`aspect${state.nextAspectId++}`, 
+                text:`State ${state.nextAspectId}`, 
+                x:initialX, y:initialY, 
+                radius:ASPECT_DEFAULT_RADIUS, 
+                color:ASPECT_DEFAULT_COLOR, 
+                isNpcCore:false, 
+                connectionToNpcCore:null, 
+                aura:null, 
+                waveform:{type:'none',amplitude:10},
+                transitions: [] 
+            }; 
+            if (state.view.showGrid) { newAspect.x = Math.round(newAspect.x/GRID_SIZE)*GRID_SIZE; newAspect.y = Math.round(newAspect.y/GRID_SIZE)*GRID_SIZE;} 
+            state.aspects.push(newAspect); 
+            state.selectedCircleId = newAspect.id; 
+            updateControls(); 
+            draw();
+        });
+        aspectText.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) {selectedCircle.text = e.target.value; selectedAspectName.textContent = selectedCircle.text.substring(0,20) + (selectedCircle.text.length > 20 ? '...':''); updateControls(); draw();}}); 
+        npcCoreText.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && selectedCircle.isNpcCore) {selectedCircle.text = e.target.value; draw();}});
+        npcCoreText.addEventListener('focus', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && selectedCircle.isNpcCore && state.npcCore.text.toUpperCase() === 'NPC' && !state.ui.hasShownNpcRenameWarning) { showMessage('Note on Renaming NPC Core', 'You can rename the "NPC" core node to the specific character\'s name (e.g., "Guard Captain," "Elara").'); state.ui.hasShownNpcRenameWarning = true; } });
+        aspectSize.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) {selectedCircle.radius = parseInt(e.target.value); aspectSizeValue.textContent = selectedCircle.radius; draw();}});
+        
+        function populateColorPalette(container, forNpcCore=false) { 
+            Object.values(FEMS_COLORS).forEach(color => { 
+                const button=document.createElement('button'); button.classList.add('color-palette-button'); button.style.backgroundColor=color.value; button.dataset.color=color.value; 
+                const tooltipSpan=document.createElement('span'); tooltipSpan.classList.add('tooltiptext'); tooltipSpan.textContent=`${color.name}: ${color.tooltip}`; 
+                const wrapper=document.createElement('div'); wrapper.classList.add('tooltip'); wrapper.appendChild(button); wrapper.appendChild(tooltipSpan); 
+                button.addEventListener('click', ()=>{ const selectedCircle = getSelectedCircle(); if(selectedCircle){if((forNpcCore && selectedCircle.isNpcCore) || (!forNpcCore && !selectedCircle.isNpcCore)) selectedCircle.color=color.value; updateControls(); draw();}}); container.appendChild(wrapper);
+            });
+        }
+        populateColorPalette(colorPaletteContainer, false); populateColorPalette(npcCoreColorPaletteContainer, true);
+        
+        lineTypeButtons.forEach(button => button.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) {selectedCircle.connectionToNpcCore = button.dataset.lineType==='none' ? null : button.dataset.lineType; updateControls(); draw();}})); 
+        Object.values(AURA_SYMBOLS).forEach(aura => { const button=document.createElement('button'); button.classList.add('symbol-button','hover:bg-slate-200'); button.textContent=aura.symbol; button.dataset.symbolName=aura.name; const tooltipSpan=document.createElement('span'); tooltipSpan.classList.add('tooltiptext'); tooltipSpan.textContent=`${aura.name}: ${aura.tooltip}`; const wrapper=document.createElement('div'); wrapper.classList.add('tooltip'); wrapper.appendChild(button); wrapper.appendChild(tooltipSpan); button.addEventListener('click', ()=>{ const selectedCircle = getSelectedCircle(); if(selectedCircle){if(selectedCircle.aura && selectedCircle.aura.name===aura.name) selectedCircle.aura=null; else selectedCircle.aura = aura.name==='None' ? null:aura; updateControls(); draw();}}); auraSymbolsContainer.appendChild(wrapper);});
+        waveTypeButtons.forEach(button => button.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) { if (!selectedCircle.waveform) selectedCircle.waveform = {type:'none',amplitude:10}; selectedCircle.waveform.type = button.dataset.waveType; waveAmplitude.disabled = selectedCircle.waveform.type==='none'; updateControls(); draw();}}));
+        waveAmplitude.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore && selectedCircle.waveform) {selectedCircle.waveform.amplitude = parseInt(e.target.value); waveAmplitudeValue.textContent = selectedCircle.waveform.amplitude; draw();}});
+        
+        bringToFrontButton.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) { const index = state.aspects.findIndex(a => a.id === selectedCircle.id); if (index > -1 && index < state.aspects.length - 1) { const [aspectToMove] = state.aspects.splice(index, 1); state.aspects.push(aspectToMove); draw(); } } });
+        sendToBackButton.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) { const index = state.aspects.findIndex(a => a.id === selectedCircle.id); if (index > 0) { const [aspectToMove] = state.aspects.splice(index, 1); state.aspects.unshift(aspectToMove); draw(); } } });
+        clearMapButton.addEventListener('click', () => { state.ui.isPerformingCriticalOperation = true; confirmClearModal.style.display = "block"; });
+        confirmClearOkButton.onclick = () => { try { state.aspects = []; state.lastDeletedAspect = null; state.nextAspectId = 0; state.selectedCircleId = null; resetViewAndNpcCore(true); state.ui.hasShownNpcRenameWarning = false; state.ui.hasShownClusterWarning = false; updateControls(); drawAll(); } finally { confirmClearModal.style.display = "none"; state.ui.isPerformingCriticalOperation = false; } };
+        confirmClearCancelButton.onclick = () => { confirmClearModal.style.display = "none"; state.ui.isPerformingCriticalOperation = false; };
+        deleteAspectButton.addEventListener('click', () => { 
+            const selectedCircle = getSelectedCircle(); 
+            if (selectedCircle && !selectedCircle.isNpcCore) { 
+                state.lastDeletedAspect = {...selectedCircle}; 
+                const deletedAspectId = selectedCircle.id;
+                state.aspects = state.aspects.filter(aspect => aspect.id !== deletedAspectId); 
+                state.aspects.forEach(aspect => {
+                    if (aspect.transitions) {
+                        aspect.transitions = aspect.transitions.filter(t => t.targetId !== deletedAspectId);
+                    }
+                });
+                state.selectedCircleId = null; 
+                updateControls(); 
+                draw();
+            }
+        });
+        undeleteAspectButton.addEventListener('click', () => { if (state.lastDeletedAspect) { state.aspects.push(state.lastDeletedAspect); state.selectedCircleId = state.lastDeletedAspect.id; state.lastDeletedAspect = null; updateControls(); draw();}});
+        toggleRingsCheckbox.addEventListener('change', (e) => { state.view.showRings = e.target.checked; drawAll();});
+        toggleGridCheckbox.addEventListener('change', (e) => { state.view.showGrid = e.target.checked; drawAll();});
+        
+        function getEmotionalToneNameHelper(colorValue){ const foundColor = Object.values(FEMS_COLORS).find(c => c.value === colorValue); return foundColor ? foundColor.name.split(',')[0].toLowerCase() : "an undefined tone";}
+        function getIntensityDescriptor(radius){ if (radius < (ASPECT_DEFAULT_RADIUS*0.85)) return "low intensity"; if (radius > (ASPECT_DEFAULT_RADIUS*1.65)) return "high intensity"; return "moderate intensity";}
+        function getConnectionStrengthDescriptor(connectionType){ if (connectionType === 'solid') return "strong"; if (connectionType === 'dashed') return "subtle"; return "";}
+        function getDistanceDescriptor(aspect, npcNode){ const distance = Math.hypot(aspect.x-npcNode.x, aspect.y-npcNode.y); if (distance < CONCENTRIC_RING_RADII[0]) return "core"; if (distance < CONCENTRIC_RING_RADII[1]) return "present"; return "distant";}
+        function getVolatilityType(waveformType){ if (waveformType === 'sine') return "stable"; if (waveformType === 'sawtooth') return "volatile"; return "";} 
+        function getVolatilityIntensity(amplitude){ if (amplitude < 13) return "low"; if (amplitude < 22) return "moderate"; return "high";} 
+        
+        function generateLocalProfileForAspect(aspect, npcNode) { 
+            let parts=[]; 
+            parts.push(`The emotional state "${aspect.text}" is characterized by a ${getEmotionalToneNameHelper(aspect.color)} tone and ${getIntensityDescriptor(aspect.radius)}.`); 
+            const connectionStrength = getConnectionStrengthDescriptor(aspect.connectionToNpcCore); 
+            if(connectionStrength) parts.push(`It has a ${connectionStrength} connection to the NPC's core, and its influence is currently ${getDistanceDescriptor(aspect, npcNode)}.`); 
+            else parts.push("It currently has no direct connection to the NPC's core."); 
+            if (aspect.aura && aspect.aura.name !== 'None') parts.push(`This state is modified as ${aspect.aura.name.toLowerCase()}.`); 
+            if (aspect.waveform && aspect.waveform.type !== 'none') parts.push(`Its volatility is ${getVolatilityType(aspect.waveform.type)} with ${getVolatilityIntensity(aspect.waveform.amplitude)} amplitude.`);
+            
+            if (aspect.transitions && aspect.transitions.length > 0) {
+                parts.push("From this state, the NPC might transition:");
+                aspect.transitions.forEach(trans => {
+                    const target = state.aspects.find(a => a.id === trans.targetId);
+                    const targetName = target ? `"${target.text}"` : "another state";
+                    parts.push(`  - To ${targetName}, triggered by: "${trans.label || 'unspecified cause'}".`);
+                });
+            }
+            return parts.join(' ') + "\n";
+        }
+
+        generateProfileButton.addEventListener('click', async () => { 
+            state.ui.lastGeminiButtonId = generateProfileButton.id; // Store which button initiated the call
+            if (state.aspects.length === 0) { showMessage("No Emotional States", "Add some emotional states to the map first."); return;} 
+            let localProfileText = `NPC: "${state.npcCore.text}" (Core Tone: ${getEmotionalToneNameHelper(state.npcCore.color)})\n\n--- Emotional States Profile ---\n`;
+            localProfileText += state.aspects.map(aspect => generateLocalProfileForAspect(aspect, state.npcCore)).join('\n'); 
+            
+            generatedContentModalTitle.textContent = "NPC Emotional Profile";
+            generatedContentModalTextarea.value = localProfileText + "\n\n✨ Generating AI Interpretation...";
+            generatedContentModal.style.display = "block";
+
+            const geminiPrompt = `Analyze the following NPC emotional profile and provide a brief (2-4 sentences) holistic interpretation of the character's likely emotional tendencies, core conflicts, or potential narrative arc. Focus on high-level patterns and insights based *only* on the provided states, their properties, and their connections.\n\nNPC Profile:\n${localProfileText}`;
+            const aiInterpretation = await callGemini(geminiPrompt);
+
+            if (aiInterpretation) {
+                generatedContentModalTextarea.value = localProfileText + "\n\n--- ✨ AI Interpretation ---\n" + aiInterpretation;
+            } else {
+                generatedContentModalTextarea.value = localProfileText + "\n\n(AI interpretation failed or returned no content)";
+            }
+        });
+        
+        elaborateStateButton.addEventListener('click', async () => {
+            state.ui.lastGeminiButtonId = elaborateStateButton.id;
+            const selectedAspect = getSelectedCircle();
+            if (!selectedAspect || selectedAspect.isNpcCore) {
+                showMessage("No State Selected", "Please select an emotional state to elaborate on.");
+                return;
+            }
+            const prompt = `An NPC is in an emotional state described as: "${selectedAspect.text}", with an intensity of ${getIntensityDescriptor(selectedAspect.radius)}, an emotional tone of ${getEmotionalToneNameHelper(selectedAspect.color)}${selectedAspect.aura ? `, modified as ${selectedAspect.aura.name.toLowerCase()}` : ''}. Briefly elaborate on this state (1-2 paragraphs) with potential internal thoughts, observable non-verbal behaviors, or subtle expressions an actor might convey. Focus on narrative color.`;
+            
+            generatedContentModalTitle.textContent = `Elaboration for: ${selectedAspect.text}`;
+            generatedContentModalTextarea.value = "✨ Generating elaboration...";
+            generatedContentModal.style.display = "block";
+
+            const elaboration = await callGemini(prompt);
+            if (elaboration) {
+                generatedContentModalTextarea.value = elaboration;
+            } else {
+                generatedContentModalTextarea.value = "(AI elaboration failed or returned no content)";
+            }
+        });
+
+        suggestDialogueButton.addEventListener('click', async () => {
+            state.ui.lastGeminiButtonId = suggestDialogueButton.id;
+            const selectedAspect = getSelectedCircle();
+            if (!selectedAspect || selectedAspect.isNpcCore) {
+                showMessage("No State Selected", "Please select an emotional state to suggest dialogue for.");
+                return;
+            }
+            const prompt = `An NPC named "${state.npcCore.text}" is currently feeling "${selectedAspect.text}" (emotional tone: ${getEmotionalToneNameHelper(selectedAspect.color)}, intensity: ${getIntensityDescriptor(selectedAspect.radius)}). Suggest one short, characteristic dialogue snippet (1-2 sentences) they might say while in this specific state. Output only the dialogue snippet.`;
+            
+            generatedContentModalTitle.textContent = `Dialogue Snippet for: ${selectedAspect.text}`;
+            generatedContentModalTextarea.value = "✨ Generating dialogue snippet...";
+            generatedContentModal.style.display = "block";
+
+            const dialogue = await callGemini(prompt);
+            if (dialogue) {
+                generatedContentModalTextarea.value = `"${dialogue.trim()}"`;
+            } else {
+                generatedContentModalTextarea.value = "(AI dialogue suggestion failed or returned no content)";
+            }
+        });
+        
+        suggestTransitionLabelsButton.addEventListener('click', async () => {
+            state.ui.lastGeminiButtonId = suggestTransitionLabelsButton.id;
+            const sourceAspect = getSelectedCircle();
+            const targetAspectId = transitionTargetAspectSelect.value;
+            if (!sourceAspect || sourceAspect.isNpcCore || !targetAspectId) {
+                showMessage("Info Needed", "Select a source state and a target state for label suggestions.");
+                return;
+            }
+            const targetAspect = state.aspects.find(a => a.id === targetAspectId);
+            if (!targetAspect) return;
+
+            const prompt = `An NPC is transitioning from an emotional state of "${sourceAspect.text}" (tone: ${getEmotionalToneNameHelper(sourceAspect.color)}) to an emotional state of "${targetAspect.text}" (tone: ${getEmotionalToneNameHelper(targetAspect.color)}). Suggest 3 to 5 concise (1-4 words) labels for potential triggers or causes for this specific emotional transition. These labels will be used on a diagram.`;
+            
+            transitionLabelSuggestionsUl.innerHTML = '<li>Loading suggestions...</li>';
+            transitionLabelSuggestionsUl.classList.remove('hidden');
+
+            const suggestions = await callGemini(prompt, true); // Expecting JSON array
+
+            transitionLabelSuggestionsUl.innerHTML = ''; // Clear loading/previous
+            if (suggestions && Array.isArray(suggestions) && suggestions.length > 0) {
+                suggestions.forEach(label => {
+                    if (typeof label === 'string') {
+                        const li = document.createElement('li');
+                        li.textContent = label;
+                        li.onclick = () => {
+                            transitionLabelInput.value = label;
+                            transitionLabelSuggestionsUl.classList.add('hidden');
+                            transitionLabelSuggestionsUl.innerHTML = '';
+                        };
+                        transitionLabelSuggestionsUl.appendChild(li);
+                    }
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'No suggestions or error.';
+                transitionLabelSuggestionsUl.appendChild(li);
+                setTimeout(() => { // Hide after a bit if no suggestions
+                    transitionLabelSuggestionsUl.classList.add('hidden');
+                    transitionLabelSuggestionsUl.innerHTML = '';
+                }, 3000);
+            }
+             if (transitionLabelSuggestionsUl.children.length === 0) { // If it's empty after processing, hide
+                transitionLabelSuggestionsUl.classList.add('hidden');
+            }
+        });
+
+        transitionLabelInput.addEventListener('focusout', () => {
+            // Delay hiding to allow click on suggestion list
+            setTimeout(() => {
+                if (!transitionLabelSuggestionsUl.matches(':hover')) { // Don't hide if mouse is over suggestions
+                    transitionLabelSuggestionsUl.classList.add('hidden');
+                }
+            }, 200);
+        });
+
+
+        saveMapButton.addEventListener('click', () => { const mapData = {npcCore: state.npcCore, aspects: state.aspects, nextAspectId: state.nextAspectId, viewOptions:{showRings: state.view.showRings, showGrid: state.view.showGrid}, transform:{panX: state.view.panX, panY: state.view.panY, scale: state.view.scale}}; const jsonData = JSON.stringify(mapData, null, 2); const blob = new Blob([jsonData],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='npc-emotion-map.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showMessage('Map Saved', 'Your NPC emotion map data has been prepared for download.');});
+        loadMapInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { const mapData = JSON.parse(e.target.result); if (mapData.npcCore && mapData.aspects && typeof mapData.nextAspectId !== 'undefined') { state.npcCore = mapData.npcCore; state.aspects = mapData.aspects.map(a => ({...a, transitions: a.transitions || [] })); state.nextAspectId = mapData.nextAspectId; const vo = mapData.viewOptions||{}; state.view.showRings = vo.showRings===undefined ? true : vo.showRings; state.view.showGrid = vo.showGrid===undefined ? false : vo.showGrid; const tr = mapData.transform||{}; state.view.panX = tr.panX||0; state.view.panY = tr.panY||0; state.view.scale = tr.scale||1.0; state.lastDeletedAspect=null; state.selectedCircleId=null; state.ui.hasShownNpcRenameWarning = !!state.npcCore.text && state.npcCore.text.toUpperCase() !== 'NPC'; state.ui.hasShownClusterWarning = false; resizeCanvas(); updateControls(); showMessage('Map Loaded', 'Map data has been loaded successfully.');} else if (mapData.selfCircle && mapData.aspects) { state.npcCore = {...mapData.selfCircle, id: 'npcCore', isNpcCore: true, text: mapData.selfCircle.text || NPC_CORE_DEFAULT_TEXT}; delete state.npcCore.isSelf; state.aspects = mapData.aspects.map(a => ({...a, connectionToNpcCore: a.connectionToSelf, transitions: a.transitions || []})); delete state.aspects.forEach(a => delete a.connectionToSelf); state.nextAspectId = mapData.nextAspectId || 0; const vo = mapData.viewOptions||{}; state.view.showRings = vo.showRings===undefined ? true : vo.showRings; state.view.showGrid = vo.showGrid===undefined ? false : vo.showGrid; const tr = mapData.transform||{}; state.view.panX = tr.panX||0; state.view.panY = tr.panY||0; state.view.scale = tr.scale||1.0; state.lastDeletedAspect=null; state.selectedCircleId=null; state.ui.hasShownNpcRenameWarning = !!state.npcCore.text && state.npcCore.text.toUpperCase() !== 'NPC'; state.ui.hasShownClusterWarning = false; resizeCanvas(); updateControls(); showMessage('Map Loaded (Legacy Format)', 'Old map format loaded. Please save to update.');} else showMessage('Load Error', 'Invalid map data file.');} catch (error) { console.error("Error loading map:", error); showMessage('Load Error', 'Could not parse map data.');} finally { loadMapInput.value = '';}}; reader.readAsText(file);});
+        async function dataURLtoBlob(dataurl) { const arr = dataurl.split(','); const mimeMatch = arr[0].match(/:(.*?);/); if (!mimeMatch) { console.error("Invalid data URL: mime type not found"); return null; } const mime = mimeMatch[1]; const bstr = atob(arr[1]); let n = bstr.length; const u8arr = new Uint8Array(n); while (n--) { u8arr[n] = bstr.charCodeAt(n); } return new Blob([u8arr], { type: mime }); }
+        
+        exportPngButton.addEventListener('click', async () => { 
+            const previouslySelectedId=state.selectedCircleId; 
+            state.selectedCircleId=null; drawAll(); 
+            
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = npcWeaverCanvas.width;
+            exportCanvas.height = npcWeaverCanvas.height;
+            const exportCtx = exportCanvas.getContext('2d');
+
+            exportCtx.drawImage(backgroundCanvas, 0, 0);
+            
+            const tempPanX = state.view.panX; const tempPanY = state.view.panY; const tempScale = state.view.scale;
+            exportCtx.save();
+            exportCtx.translate(tempPanX, tempPanY); 
+            exportCtx.scale(tempScale, tempScale); 
+
+            state.aspects.forEach(aspect => { 
+                if (aspect.transitions && aspect.transitions.length > 0) {
+                    aspect.transitions.forEach(trans => {
+                        const targetAspect = state.aspects.find(a => a.id === trans.targetId);
+                        if (targetAspect) { drawTransitionArrow(aspect, targetAspect, trans.label, exportCtx); }
+                    });
+                }
+            });
+            drawCircle(state.npcCore, exportCtx); 
+            state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') drawLineToNpcCore(aspect, state.npcCore, aspect.connectionToNpcCore, exportCtx); }); 
+            state.aspects.forEach(c => drawCircle(c, exportCtx)); 
+            exportCtx.restore();
+
+            const dataURL=exportCanvas.toDataURL('image/png'); 
+            
+            if (window.showSaveFilePicker) { try { const blob = await dataURLtoBlob(dataURL); if (!blob) { showMessage('Export Error', 'Could not convert canvas to Blob.'); state.selectedCircleId=previouslySelectedId; drawAll(); return; } const fileHandle = await window.showSaveFilePicker({ suggestedName: 'npc-emotion-map.png', types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] }, }], }); const writableStream = await fileHandle.createWritable(); await writableStream.write(blob); await writableStream.close(); showMessage('PNG Exported', `Map exported as ${fileHandle.name}.`); } catch (err) { if (err.name !== 'AbortError') { const a = document.createElement('a'); a.href = dataURL; a.download = 'npc-emotion-map.png'; a.click(); a.remove(); showMessage('PNG Exported (Fallback)', 'Your map has been prepared for download using a fallback method.'); } else { console.info('PNG export aborted by user.'); } } } else { const a=document.createElement('a'); a.href=dataURL; a.download='npc-emotion-map.png'; a.click(); a.remove(); showMessage('PNG Exported', 'Your map has been prepared for download.'); } 
+            state.selectedCircleId=previouslySelectedId; 
+            drawAll(); 
+        });
+
+        function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'}[c]));}
+        
+        function addCircleToSvg(circle, elementsArray, tempCtxForMeasure) {
+            elementsArray.push(`<circle cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" fill="${circle.color}" stroke="#374151" stroke-width="1.5" />`);
+            const textColor = kontrastFarbe(circle.color);
+            const { fontSize: finalFontSizeSvg, lines: svgTextLines } = calculateTextLayout(circle.text, circle.radius, tempCtxForMeasure);
+
+            const lineHeight = finalFontSizeSvg * 1.2; 
+            const totalTextHeight = svgTextLines.length * lineHeight; 
+            let startYText = circle.y - (totalTextHeight / 2) + (lineHeight / 2) - (finalFontSizeSvg * 0.1); 
+            
+            let textSVG = `<text x="${circle.x}" y="${startYText}" font-family="Inter, sans-serif" font-size="${finalFontSizeSvg}" font-weight="bold" text-anchor="middle" fill="${textColor}" dominant-baseline="central">`; 
+            svgTextLines.forEach((line, index) => {
+                textSVG += `<tspan x="${circle.x}" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`;
+            });
+            textSVG += `</text>`; 
+            elementsArray.push(textSVG); 
+
+            if (circle.aura && circle.aura.symbol.trim() !== '') { 
+                const symbolSize = finalFontSizeSvg * 1.5; 
+                elementsArray.push(`<text x="${(circle.x + circle.radius*0.5).toFixed(2)}" y="${(circle.y - circle.radius*0.5).toFixed(2)}" font-family="Inter, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif" font-size="${symbolSize}" text-anchor="middle" dominant-baseline="central">${escapeXml(circle.aura.symbol)}</text>`);
+            } 
+            if (circle.waveform && circle.waveform.type !== 'none') {
+                const {type, amplitude: rawAmplitude} = circle.waveform;
+                const A_MIN_FACTOR = 0.05; const A_MAX_FACTOR = 0.20;
+                let min_visual_amp_svg = circle.radius * A_MIN_FACTOR; let max_visual_amp_svg = circle.radius * A_MAX_FACTOR;
+                min_visual_amp_svg = Math.max(min_visual_amp_svg, 0.5); max_visual_amp_svg = Math.max(max_visual_amp_svg, min_visual_amp_svg);
+                let effectiveAmplitudeSvg;
+                if (min_visual_amp_svg >= max_visual_amp_svg) { effectiveAmplitudeSvg = min_visual_amp_svg; } else { const rawAmplitudeNormalizedSvg = (rawAmplitude - 5) / (30 - 5); effectiveAmplitudeSvg = min_visual_amp_svg + rawAmplitudeNormalizedSvg * (max_visual_amp_svg - min_visual_amp_svg); }
+                effectiveAmplitudeSvg = Math.max(0, effectiveAmplitudeSvg);
+                const waveWidth = circle.radius * 1.0; const waveStartX = circle.x - waveWidth / 2; const waveEndX = circle.x + waveWidth / 2;
+                const marginFromBottomEdgeSvg = circle.radius * 0.1; const waveBaseY = circle.y + circle.radius - effectiveAmplitudeSvg - marginFromBottomEdgeSvg;
+                let pathData = `M ${waveStartX.toFixed(2)} ${waveBaseY.toFixed(2)} `; const waveStrokeColorSvg = kontrastFarbe(circle.color);
+                if (type==='sine') { for (let i=waveStartX; i<=waveEndX; i++) { const phase = ((i-waveStartX)/waveWidth)*Math.PI*2; pathData += `L ${i.toFixed(2)} ${(waveBaseY - Math.sin(phase)*effectiveAmplitudeSvg).toFixed(2)} `; }
+                } else if (type==='sawtooth') { 
+                    const segments = Math.max(4, Math.floor(waveWidth / 6)); const segmentWidth = waveWidth/segments;
+                    if (segmentWidth > 0 && effectiveAmplitudeSvg > 0) { for (let j=0; j<segments; j++) { pathData += `L ${(waveStartX + j*segmentWidth + segmentWidth/2).toFixed(2)} ${(waveBaseY - effectiveAmplitudeSvg).toFixed(2)} `; pathData += `L ${(waveStartX + (j+1)*segmentWidth).toFixed(2)} ${waveBaseY.toFixed(2)} `; }
+                    } else if (effectiveAmplitudeSvg > 0) { pathData += `L ${circle.x.toFixed(2)} ${(waveBaseY - effectiveAmplitudeSvg).toFixed(2)} L ${circle.x.toFixed(2)} ${waveBaseY.toFixed(2)} `; }
+                } 
+                elementsArray.push(`<path d="${pathData}" stroke="${waveStrokeColorSvg}" stroke-width="1.5" fill="none" />`);
+            }
+        }
+        exportSvgButton.addEventListener('click', () => { 
+            let minX=state.npcCore.x-state.npcCore.radius, minY=state.npcCore.y-state.npcCore.radius, maxX=state.npcCore.x+state.npcCore.radius, maxY=state.npcCore.y+state.npcCore.radius; 
+            state.aspects.forEach(a => {minX=Math.min(minX, a.x-a.radius); minY=Math.min(minY, a.y-a.radius); maxX=Math.max(maxX, a.x+a.radius); maxY=Math.max(maxY, a.y+a.radius);}); 
+            const padding=50; minX-=padding; minY-=padding; maxX+=padding; maxY+=padding; 
+            const worldWidth = maxX-minX; const worldHeight = maxY-minY; 
+            let svgElements=[]; const tempCtx=document.createElement('canvas').getContext('2d'); 
+            svgElements.push(`<g transform="translate(${-minX}, ${-minY})">`); 
+            if (state.view.showGrid) { let gridLinesSvg=''; for (let x=Math.floor(minX/GRID_SIZE)*GRID_SIZE; x<=maxX; x+=GRID_SIZE) gridLinesSvg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" stroke="rgba(0,0,0,0.1)" stroke-width="0.5" />`; for (let y=Math.floor(minY/GRID_SIZE)*GRID_SIZE; y<=maxY; y+=GRID_SIZE) gridLinesSvg += `<line x1="${minX}" y1="${y}" x2="${maxX}" y2="${y}" stroke="rgba(0,0,0,0.1)" stroke-width="0.5" />`; svgElements.push(gridLinesSvg);} 
+            if (state.view.showRings && state.npcCore) { let ringsSvg=''; CONCENTRIC_RING_RADII.forEach(radius => ringsSvg += `<circle cx="${state.npcCore.x}" cy="${state.npcCore.y}" r="${radius}" fill="none" stroke="rgba(100,100,100,0.2)" stroke-width="1" stroke-dasharray="5,5" />`); svgElements.push(ringsSvg);} 
+            
+            state.aspects.forEach(aspect => {
+                if (aspect.transitions && aspect.transitions.length > 0) {
+                    aspect.transitions.forEach(trans => {
+                        const targetAspect = state.aspects.find(a => a.id === trans.targetId);
+                        if (targetAspect) {
+                            const angle = Math.atan2(targetAspect.y - aspect.y, targetAspect.x - aspect.x);
+                            const arrowLength = 15; const arrowWidth = 8; 
+                            const startX = aspect.x + aspect.radius * Math.cos(angle);
+                            const startY = aspect.y + aspect.radius * Math.sin(angle);
+                            const endX = targetAspect.x - targetAspect.radius * Math.cos(angle);
+                            const endY = targetAspect.y - targetAspect.radius * Math.sin(angle);
+
+                            svgElements.push(`<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}" stroke="${TRANSITION_ARROW_COLOR}" stroke-width="1.5" />`);
+                            svgElements.push(`<polygon points="${endX.toFixed(2)},${endY.toFixed(2)} ${(endX - arrowLength * Math.cos(angle - Math.PI / 7)).toFixed(2)},${(endY - arrowLength * Math.sin(angle - Math.PI / 7)).toFixed(2)} ${(endX - arrowLength * Math.cos(angle + Math.PI / 7)).toFixed(2)},${(endY - arrowLength * Math.sin(angle + Math.PI / 7)).toFixed(2)}" fill="${TRANSITION_ARROW_COLOR}" />`);
+                            if (trans.label) {
+                                const midX = (startX + endX) / 2; const midY = (startY + endY) / 2;
+                                const labelOffsetX = 10 * Math.sin(angle); const labelOffsetY = -10 * Math.cos(angle);
+                                svgElements.push(`<text x="${(midX + labelOffsetX).toFixed(2)}" y="${(midY + labelOffsetY).toFixed(2)}" font-family="Inter, sans-serif" font-size="10" font-style="italic" fill="${TRANSITION_LABEL_COLOR}" text-anchor="middle" dominant-baseline="middle">${escapeXml(trans.label)}</text>`);
+                            }
+                        }
+                    });
+                }
+            });
+
+            addCircleToSvg(state.npcCore, svgElements, tempCtx); 
+            state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') { const angle = Math.atan2(state.npcCore.y-aspect.y, state.npcCore.x-aspect.x); const startX = aspect.x+aspect.radius*Math.cos(angle); const startY = aspect.y+aspect.radius*Math.sin(angle); const endX = state.npcCore.x-state.npcCore.radius*Math.cos(angle); const endY = state.npcCore.y-state.npcCore.radius*Math.sin(angle); const dashArray = aspect.connectionToNpcCore==='dashed' ? 'stroke-dasharray="10,5"':''; svgElements.push(`<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}" stroke="#374151" stroke-width="2" ${dashArray} />`);}}); 
+            state.aspects.forEach(aspect => addCircleToSvg(aspect, svgElements, tempCtx)); 
+            svgElements.push(`</g>`); 
+            const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${worldWidth}" height="${worldHeight}" viewBox="0 0 ${worldWidth} ${worldHeight}" style="background-color: #ffffff;">${svgElements.join('')}</svg>`; 
+            const svgBlob = new Blob([svgContent], {type:'image/svg+xml;charset=utf-8'}); const svgUrl = URL.createObjectURL(svgBlob); 
+            const a=document.createElement('a'); a.href=svgUrl; a.download='npc-emotion-map.svg'; a.click(); a.remove(); URL.revokeObjectURL(svgUrl); showMessage('SVG Exported', 'Your NPC emotion map has been prepared for download.');
+        });
+        
+        // --- Event Listeners ---
+        npcWeaverCanvas.addEventListener('mousedown', (e) => { e.preventDefault(); handleMouseDown(e); });
+        npcWeaverCanvas.addEventListener('mousemove', (e) => { e.preventDefault(); handleMouseMove(e); });
+        npcWeaverCanvas.addEventListener('mouseup', (e) => { handleMouseUp(e); });
+        npcWeaverCanvas.addEventListener('wheel', handleWheel, {passive:false});
+        npcWeaverCanvas.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleClick(e);});
+        
+        function handleTouchStart(e) { e.preventDefault(); if (e.touches.length === 2) { state.ui.isPinching = true; state.view.isPanning = false; state.draggingCircleId = null; state.ui.initialPinchDistance = Math.hypot( e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY ); } else if (e.touches.length === 1) { state.ui.isPinching = false; handleMouseDown(e); } }
+        function handleTouchMove(e) { e.preventDefault(); if (state.ui.isPinching && e.touches.length === 2) { const currentPinchDistance = Math.hypot( e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY ); if (state.ui.initialPinchDistance > 0) { const zoomFactor = currentPinchDistance / state.ui.initialPinchDistance; const newScaleCandidate = state.view.scale * zoomFactor; const newScale = Math.min(Math.max(newScaleCandidate, MIN_ZOOM), MAX_ZOOM); const midX_screen = (e.touches[0].clientX + e.touches[1].clientX) / 2; const midY_screen = (e.touches[0].clientY + e.touches[1].clientY) / 2; const rect = npcWeaverCanvas.getBoundingClientRect(); const mouseXOnCanvas = midX_screen - rect.left; const mouseYOnCanvas = midY_screen - rect.top; state.view.panX = mouseXOnCanvas - (mouseXOnCanvas - state.view.panX) * (newScale / state.view.scale); state.view.panY = mouseYOnCanvas - (mouseYOnCanvas - state.view.panY) * (newScale / state.view.scale); state.view.scale = newScale; state.ui.initialPinchDistance = currentPinchDistance; } drawAll(); } else if (!state.ui.isPinching && e.touches.length === 1) { handleMouseMove(e); } }
+        function handleTouchEnd(e) { const wasPinching = state.ui.isPinching; if (state.ui.isPinching) { if (e.touches.length < 2) { state.ui.isPinching = false; state.ui.initialPinchDistance = 0; } } if (!wasPinching || e.touches.length === 0) { const relevantTouch = e.changedTouches[0] || e; handleMouseUp(relevantTouch); const currentTime = new Date().getTime(); const tapLength = currentTime - state.ui.lastTapTime; if (tapLength < 300 && tapLength > 0 && e.target === npcWeaverCanvas) { handleDoubleClick(relevantTouch); } state.ui.lastTapTime = currentTime; } draw(); }
+        npcWeaverCanvas.addEventListener('touchstart', handleTouchStart, {passive:false});
+        npcWeaverCanvas.addEventListener('touchmove', handleTouchMove, {passive:false});
+        npcWeaverCanvas.addEventListener('touchend', handleTouchEnd, {passive:false});
+        npcWeaverCanvas.addEventListener('touchcancel', handleTouchEnd, {passive:false});
+        
+        window.addEventListener('beforeunload', function (e) {
+            if (state.ui.isPerformingCriticalOperation) return undefined;
+            const hasChanges = state.aspects.length > 0 || (state.npcCore && (state.npcCore.text !== NPC_CORE_DEFAULT_TEXT || state.npcCore.color !== NPC_CORE_DEFAULT_COLOR));
+            if (hasChanges) {
+                const confirmationMessage = 'It looks like you have unsaved changes. If you leave, your work will be lost.';
+                (e || window.event).returnValue = confirmationMessage;
+                return confirmationMessage;
+            }
+        });
+        function isUserTyping() { const activeElement = document.activeElement; if (!activeElement) return false; const tagName = activeElement.tagName.toLowerCase(); return tagName === 'input' || tagName === 'textarea' || activeElement.id === 'modalTextInput' || activeElement.isContentEditable; }
+        window.addEventListener('keydown', function(event) {
+            let shortcutHandled = false; const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+            if (isCtrlOrCmd) { switch (event.key.toLowerCase()) { case 's': saveMapButton.click(); shortcutHandled = true; break; case 'o': loadMapInput.click(); shortcutHandled = true; break; case 'z': if (!isUserTyping() && !undeleteAspectButton.disabled) { undeleteAspectButton.click(); shortcutHandled = true; } break; } }
+            if (shortcutHandled) { event.preventDefault(); return; }
+            if (isUserTyping() || textInputModal.style.display === "block" || messageModal.style.display === "block" || generatedContentModal.style.display === "block" || quickHelpModal.style.display === "block" || confirmClearModal.style.display === "block" || apiKeyModal.style.display === "block") { return; }
+            const selectedCircle = getSelectedCircle();
+            switch (event.key.toLowerCase()) {
+                case 'a': addAspectButton.click(); shortcutHandled = true; break;
+                case 'delete': case 'backspace': if (selectedCircle && !selectedCircle.isNpcCore) { deleteAspectButton.click(); shortcutHandled = true; } break;
+                case '=': case '+': zoomInButton.click(); shortcutHandled = true; break;
+                case '-': zoomOutButton.click(); shortcutHandled = true; break;
+                case '0': resetViewButton.click(); shortcutHandled = true; break;
+                case 'c': centerOnNpcButton.click(); shortcutHandled = true; break;
+                case 'g': toggleGridCheckbox.checked = !toggleGridCheckbox.checked; state.view.showGrid = toggleGridCheckbox.checked; drawAll(); updateControls(); shortcutHandled = true; break;
+                case 'r': toggleRingsCheckbox.checked = !toggleRingsCheckbox.checked; state.view.showRings = toggleRingsCheckbox.checked; drawAll(); updateControls(); shortcutHandled = true; break;
+                case '?': case '/': if (event.shiftKey || event.key === '?') { quickHelpButton.click(); shortcutHandled = true; } break;
+            }
+            if (shortcutHandled) { event.preventDefault(); }
+        });
+        
+        function populateVocabulary() { 
+            Object.keys(STARTER_VOCABULARY).forEach(category => { 
+                const container = document.getElementById(`vocab-${category}`); 
+                if (container) { 
+                    container.innerHTML = ''; 
+                    STARTER_VOCABULARY[category].forEach(term => { 
+                        const button = document.createElement('button'); 
+                        button.className = 'vocabulary-term'; 
+                        button.textContent = term; 
+                        button.dataset.term = term; 
+                        container.appendChild(button); 
+                    }); 
+                } 
+            }); 
+        }
+        toggleVocabularyButton.addEventListener('click', () => { const isHidden = starterVocabularyContainer.classList.toggle('hidden'); toggleVocabularyButton.textContent = isHidden ? 'Show Starter Vocabulary' : 'Hide Starter Vocabulary'; });
+        starterVocabularyContainer.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('vocabulary-term')) {
+                const term = e.target.dataset.term;
+                const selectedCircle = getSelectedCircle();
+                if (selectedCircle && !selectedCircle.isNpcCore) { 
+                    selectedCircle.text = term;
+                    updateControls(); 
+                    draw();
+                } else { 
+                    const devicePixelRatio = window.devicePixelRatio || 1; 
+                    const logicalCanvasWidth = npcWeaverCanvas.width / devicePixelRatio;
+                    let initialX = (logicalCanvasWidth / 2 - state.view.panX) / state.view.scale + (Math.random() - 0.5) * 50 / state.view.scale;
+                    let initialY = state.npcCore.y + state.npcCore.radius + ASPECT_DEFAULT_RADIUS + 20 + (Math.random() - 0.5) * 50; 
+                    const newAspect = { 
+                        id: `aspect${state.nextAspectId++}`, text: term, x: initialX, y: initialY, 
+                        radius: ASPECT_DEFAULT_RADIUS, color: ASPECT_DEFAULT_COLOR, isNpcCore: false, 
+                        connectionToNpcCore: 'dashed', 
+                        aura: null, waveform: { type: 'none', amplitude: 10 },
+                        transitions: []
+                    };
+                    if (state.view.showGrid) { newAspect.x = Math.round(newAspect.x / GRID_SIZE) * GRID_SIZE; newAspect.y = Math.round(newAspect.y / GRID_SIZE) * GRID_SIZE; }
+                    state.aspects.push(newAspect);
+                    state.selectedCircleId = newAspect.id;
+                    updateControls();
+                    draw();
+                }
+            }
+        });
+
+        // --- Initialisation ---
+        window.addEventListener('resize', resizeCanvas);
+        loadApiKey(); // Load API key on start
+        setCopyright();
+        populateVocabulary();
+        toggleRingsCheckbox.checked = state.view.showRings;
+        toggleGridCheckbox.checked = state.view.showGrid;
+        undeleteAspectButton.disabled = !state.lastDeletedAspect;
+        updateAspectCount();
+        
+        document.fonts.ready.then(() => {
+            resizeCanvas(); 
+        }).catch((e) => {
+            console.warn("Font loading error, resizing canvas immediately.", e);
+            resizeCanvas(); 
+        });
+
+        updateControls(); 
+        npcWeaverCanvas.setAttribute('tabindex', '0'); 
+        npcWeaverCanvas.focus(); 
+    </script>
+</body>
+</html>
