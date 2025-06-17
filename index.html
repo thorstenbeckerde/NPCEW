@@ -6,10 +6,38 @@
     <title>NPC Emotion Weaver</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-body: #f1f5f9;
+            --text-main: #1e293b;
+            --text-muted: #6b7280;
+            --bg-panel: #ffffff;
+            --bg-canvas: #ffffff;
+            --border-color: #e5e7eb;
+            --control-bg: #e5e7eb;
+            --control-hover-bg: #d1d5db;
+            --control-text: #374151;
+            --ring-color: rgba(100, 100, 100, 0.2);
+            --ring-glow-color: transparent;
+            --grid-color: rgba(0, 0, 0, 0.1);
+            --transition-arrow-color: #334155;
+            --transition-label-color: #475569;
+            --donation-bg: #22c55e;
+            --donation-hover-bg: #16a34a;
+            --font-main: 'Inter', sans-serif;
+            --bg-info-box: #f8fafc;
+            --border-info-box: #e2e8f0;
+            --text-info-box: #475569;
+            --link-color: #4f46e5;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-main);
+            background-color: var(--bg-body);
+            color: var(--text-main);
             overscroll-behavior: none;
+            transition: background-color 0.3s, color 0.3s;
         }
         .canvas-container {
             position: relative;
@@ -26,22 +54,20 @@
             transform: translate(-50%, -50%);
             touch-action: none;
             border-radius: 0.5rem;
+            transition: background-color 0.3s;
         }
-        #npcWeaverCanvas { /* Ensure this ID matches JS */
-            cursor: grab;
-            z-index: 10;
-        }
-        #npcWeaverCanvas:focus {
-            outline: none;
-        }
-        #npcWeaverCanvas.grabbing {
-            cursor: grabbing;
-        }
+        #npcWeaverCanvas { cursor: grab; z-index: 10; }
+        #npcWeaverCanvas:focus { outline: none; }
+        #npcWeaverCanvas.grabbing { cursor: grabbing; }
+
         .control-panel {
+            background-color: var(--bg-panel);
             max-height: 90vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+            border-right: 1px solid var(--border-color);
         }
         .control-panel-content {
             flex-grow: 1;
@@ -52,20 +78,44 @@
         .control-panel-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
         .control-panel-content::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
         .control-panel-content::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        .themed-button {
+             background-color: var(--control-bg);
+             color: var(--control-text);
+        }
+        .themed-button:hover {
+            background-color: var(--control-hover-bg);
+        }
+
+        .themed-border { border-color: var(--border-color); }
+        .themed-text-input {
+            background-color: var(--bg-panel);
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        #donationButton {
+            background-color: var(--donation-bg);
+            transition: background-color 0.3s;
+        }
+        #donationButton:hover {
+            background-color: var(--donation-hover-bg);
+        }
+
         .color-palette-button { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
-        .color-palette-button.selected { border-color: #000; box-shadow: 0 0 0 2px white, 0 0 0 4px #000; }
+        .color-palette-button.selected { border-color: var(--text-main); box-shadow: 0 0 0 2px var(--bg-panel), 0 0 0 4px var(--text-main); }
         .symbol-button { font-size: 1.25rem; padding: 0.25rem; border-radius: 0.25rem; cursor: pointer; transition: background-color 0.2s; }
         .symbol-button.selected { background-color: #cbd5e1; }
         .tooltip { position: relative; display: inline-block; }
         .tooltip .tooltiptext { visibility: hidden; width: 120px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1000; bottom: 125%; left: 50%; margin-left: -60px; opacity: 0; transition: opacity 0.3s; }
         .tooltip .tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #555 transparent transparent transparent; }
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .modal-content textarea { width: 100%; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 0.375rem; padding: 0.5rem; font-family: monospace; font-size: 0.875rem; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: var(--bg-panel); margin: 10% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: var(--text-main); }
+        .modal-content textarea { width: 100%; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 0.375rem; padding: 0.5rem; font-family: monospace; font-size: 0.875rem; background-color: var(--bg-panel); color: var(--text-main); }
         .help-modal-content { max-height: 60vh; overflow-y: auto; text-align: left; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
-        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: var(--text-main); text-decoration: none; cursor: pointer; }
         input[type="file"] { border: 1px solid #cbd5e1; padding: 0.5rem; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
         input[type="file"]::file-selector-button { margin-right: 0.5rem; border: none; background: #6366f1; padding: 0.5rem 0.75rem; border-radius: 0.375rem; color: white; cursor: pointer; transition: background-color .15s ease-in-out; }
         input[type="file"]::file-selector-button:hover { background: #4f46e5; }
@@ -76,97 +126,51 @@
         .label-cbx .checkbox svg { position: absolute; top: -2px; left: -2px; }
         .label-cbx .checkbox svg path { fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 71px; stroke-dashoffset: 71px; transition: all .3s ease; }
         .label-cbx > span { pointer-events: none; line-height: 1.2; }
-        .control-panel-footer { padding: 0.75rem 1rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.75rem; color: #6b7280; flex-shrink: 0; }
-        .vocabulary-term {
-            background-color: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            padding: 0.25rem 0.6rem;
-            border-radius: 0.375rem;
-            font-size: 0.8rem;
-            color: #334155;
-            cursor: pointer;
-            transition: background-color 0.2s, border-color 0.2s;
-            text-align: left;
+        .control-panel-footer { padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0; transition: border-color 0.3s, color 0.3s; }
+        .vocabulary-term { background-color: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.25rem 0.6rem; border-radius: 0.375rem; font-size: 0.8rem; color: #334155; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; text-align: left; }
+        .vocabulary-term:hover { background-color: #e0e7ff; border-color: #c7d2fe; }
+        .transition-item { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.5rem; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.25rem; font-size: 0.8rem; }
+        .transition-item button { background-color: #ef4444; color: white; border: none; padding: 0.1rem 0.4rem; border-radius: 0.25rem; font-size:0.7rem; cursor: pointer; }
+        .transition-item button:hover { background-color: #dc2626; }
+        .loading-spinner { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite; vertical-align: text-bottom; margin-left: 0.25em; }
+        @keyframes spinner-border { to { transform: rotate(360deg); } }
+        .suggestion-list { list-style-type: none; padding: 0; margin-top: 0.5rem; max-height: 100px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 0.25rem; }
+        .suggestion-list li { padding: 0.25rem 0.5rem; font-size: 0.8rem; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+        .suggestion-list li:last-child { border-bottom: none; }
+        .suggestion-list li:hover { background-color: #f0f9ff; }
+        .info-box {
+            background-color: var(--bg-info-box);
+            border: 1px solid var(--border-info-box);
+            color: var(--text-info-box);
+            padding: 0.75rem; /* 12px */
+            border-radius: 0.375rem; /* 6px */
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
-        .vocabulary-term:hover {
-            background-color: #e0e7ff;
-            border-color: #c7d2fe;
+        .info-box a {
+            color: var(--link-color);
+            font-weight: 500;
         }
-        .transition-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.3rem 0.5rem;
-            background-color: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.25rem;
-            font-size: 0.8rem;
-        }
-        .transition-item button {
-            background-color: #ef4444; /* red-500 */
-            color: white;
-            border: none;
-            padding: 0.1rem 0.4rem;
-            border-radius: 0.25rem;
-            font-size:0.7rem;
-            cursor: pointer;
-        }
-        .transition-item button:hover {
-             background-color: #dc2626; /* red-600 */
-        }
-        .loading-spinner {
-            display: inline-block;
-            width: 1em;
-            height: 1em;
-            border: 2px solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner-border .75s linear infinite;
-            vertical-align: text-bottom;
-            margin-left: 0.25em;
-        }
-        @keyframes spinner-border {
-            to { transform: rotate(360deg); }
-        }
-        .suggestion-list {
-            list-style-type: none;
-            padding: 0;
-            margin-top: 0.5rem;
-            max-height: 100px;
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.25rem;
-        }
-        .suggestion-list li {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        .suggestion-list li:last-child {
-            border-bottom: none;
-        }
-        .suggestion-list li:hover {
-            background-color: #f0f9ff; /* light sky blue */
+        .info-box a:hover {
+            text-decoration: underline;
         }
 
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 flex flex-col md:flex-row h-screen overflow-hidden">
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
 
-    <div class="control-panel h-[40vh] md:h-auto w-full md:w-80 lg:w-96 bg-white shadow-lg order-2 md:order-1">
+    <div class="control-panel h-[40vh] md:h-auto w-full md:w-80 lg:w-96 shadow-lg order-2 md:order-1">
         <div class="control-panel-content p-4 space-y-4 overflow-x-hidden">
             
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-slate-700">NPC Emotion Weaver</h1>
-                <p class="text-xs text-slate-500">States: <span id="aspectCountDisplay">0</span></p>
+                <h1 class="text-2xl font-bold">NPC Emotion Weaver</h1>
+                <p class="text-xs">States: <span id="aspectCountDisplay">0</span></p>
             </div>
 
-            <div class="pt-4 border-t border-slate-200 space-y-3">
-                <h2 class="text-lg font-semibold text-slate-600">View Options</h2>
-                <div class="flex space-x-2">
-                    <button id="zoomOutButton" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1 px-3 rounded-md text-lg shadow">-</button>
-                    <button id="zoomInButton" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1 px-3 rounded-md text-lg shadow">+</button>
+            <div class="pt-4 themed-border border-t space-y-3">
+                <h2 class="text-lg font-semibold">View Options</h2>
+                 <div class="flex space-x-2">
+                    <button id="zoomOutButton" class="themed-button flex-1 font-bold py-1 px-3 rounded-md text-lg shadow">-</button>
+                    <button id="zoomInButton" class="themed-button flex-1 font-bold py-1 px-3 rounded-md text-lg shadow">+</button>
                 </div>
                  <button id="centerOnNpcButton" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-md text-sm shadow mt-2">
                     Center on NPC
@@ -174,8 +178,18 @@
                 <button id="resetViewButton" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-md text-sm shadow mt-1">
                     Reset Full View
                 </button>
+                 <div>
+                    <label for="themeSelector" class="block text-sm font-medium">Theme:</label>
+                    <select id="themeSelector" class="mt-1 block w-full px-3 py-2 themed-text-input border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="default-light">Default Light</option>
+                        <option value="writer-parchment">Writer's Parchment</option>
+                        <option value="codex-night">Codex Night (Dark)</option>
+                        <option value="arcade-dark">Arcade Dark</option>
+                        <option value="blueprint">Blueprint</option>
+                    </select>
+                </div>
                 <div class="mt-2">
-                    <label class="label-cbx text-sm font-medium text-slate-700">
+                    <label class="label-cbx text-sm font-medium">
                         <input type="checkbox" id="toggleRingsCheckbox" class="invisible">
                         <div class="checkbox">
                             <svg width="20px" height="20px" viewBox="0 0 20 20">
@@ -187,7 +201,7 @@
                     </label>
                 </div>
                 <div>
-                    <label class="label-cbx text-sm font-medium text-slate-700">
+                    <label class="label-cbx text-sm font-medium">
                         <input type="checkbox" id="toggleGridCheckbox" class="invisible">
                         <div class="checkbox">
                             <svg width="20px" height="20px" viewBox="0 0 20 20">
@@ -200,8 +214,8 @@
                 </div>
             </div>
 
-            <div class="pt-4 border-t border-slate-200 space-y-2">
-                <h2 class="text-lg font-semibold text-slate-600">Emotional State Controls</h2>
+            <div class="pt-4 themed-border border-t space-y-2">
+                <h2 class="text-lg font-semibold">Emotional State Controls</h2>
                 <button id="addAspectButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
                     Add Emotional State
                 </button>
@@ -213,46 +227,46 @@
                 </button>
             </div>
             
-            <div class="pt-4 border-t border-slate-200 space-y-3">
+            <div class="pt-4 themed-border border-t space-y-3">
                 <button id="toggleVocabularyButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
                     Show Starter Vocabulary
                 </button>
                 <div id="starterVocabularyContainer" class="hidden space-y-3 pt-2">
                     <div>
-                        <h4 class="font-semibold text-sm text-slate-600 mb-2">🎭 CORE EMOTIONS (NPC's Base Mood)</h4>
+                        <h4 class="font-semibold text-sm mb-2">🎭 CORE EMOTIONS (NPC's Base Mood)</h4>
                         <div id="vocab-core_emotions" class="flex flex-wrap gap-2"></div>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-sm text-slate-600 mb-2">🎯 MOTIVATIONS (Drives & Goals)</h4>
+                        <h4 class="font-semibold text-sm mb-2">🎯 MOTIVATIONS (Drives & Goals)</h4>
                         <div id="vocab-motivations" class="flex flex-wrap gap-2"></div>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-sm text-slate-600 mb-2">⚡ TRIGGERS (Events causing shifts)</h4>
+                        <h4 class="font-semibold text-sm mb-2">⚡ TRIGGERS (Events causing shifts)</h4>
                         <div id="vocab-triggers" class="flex flex-wrap gap-2"></div>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-sm text-slate-600 mb-2">⚔️ INTERNAL CONFLICTS (Dilemmas)</h4>
+                        <h4 class="font-semibold text-sm mb-2">⚔️ INTERNAL CONFLICTS (Dilemmas)</h4>
                         <div id="vocab-conflicts" class="flex flex-wrap gap-2"></div>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-sm text-slate-600 mb-2">📈 NARRATIVE ARCS (Emotional Journeys)</h4>
+                        <h4 class="font-semibold text-sm mb-2">📈 NARRATIVE ARCS (Emotional Journeys)</h4>
                         <div id="vocab-arcs" class="flex flex-wrap gap-2"></div>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-sm text-slate-600 mb-2">📍 PLOT-POINT LINKS (Story Beats)</h4>
+                        <h4 class="font-semibold text-sm mb-2">📍 PLOT-POINT LINKS (Story Beats)</h4>
                         <div id="vocab-plot_points" class="flex flex-wrap gap-2"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="selectedAspectControls" class="space-y-3 hidden pt-4 border-t border-slate-200">
-                <h2 class="text-lg font-semibold text-slate-600">Edit State: <span id="selectedAspectName" class="font-normal"></span></h2>
-                <div><label for="aspectText" class="block text-sm font-medium text-slate-700">Text Label:</label><input type="text" id="aspectText" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
-                <div><label for="aspectSize" class="block text-sm font-medium text-slate-700">Size (Intensity): <span id="aspectSizeValue">50</span></label><input type="range" id="aspectSize" min="15" max="100" value="50" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"></div>
-                <div><label class="block text-sm font-medium text-slate-700">Color (Emotional Tone):</label><div id="colorPalette" class="mt-1 grid grid-cols-6 gap-1"></div></div>
-                <div id="connectionControls"><label class="block text-sm font-medium text-slate-700">Connection to NPC Core:</label><div class="mt-1 flex space-x-2"><button id="solidLineButton" data-line-type="solid" class="line-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Solid</button><button id="dashedLineButton" data-line-type="dashed" class="line-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Dashed</button><button id="noLineButton" data-line-type="none" class="line-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">None</button></div></div>
-                <div><label class="block text-sm font-medium text-slate-700">Aura Symbol (Modifier):</label><div id="auraSymbols" class="mt-1 grid grid-cols-5 gap-1"></div></div>
-                <div><label class="block text-sm font-medium text-slate-700">Waveform (Volatility):</label><div class="mt-1 flex items-center space-x-2"><button id="resonanceWaveButton" data-wave-type="sine" class="wave-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Stable (Sine)</button><button id="dissonanceWaveButton" data-wave-type="sawtooth" class="wave-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">Volatile (Saw)</button></div><div class="mt-2 flex items-center space-x-2"><button id="noWaveButton" data-wave-type="none" class="wave-type-button flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-1 px-2 rounded-md text-sm">No Waveform</button></div><label for="waveAmplitude" class="block text-xs font-medium text-slate-700 mt-2">Amplitude: <span id="waveAmplitudeValue">10</span></label><input type="range" id="waveAmplitude" min="5" max="30" value="10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"></div>
+            <div id="selectedAspectControls" class="space-y-3 hidden pt-4 themed-border border-t">
+                <h2 class="text-lg font-semibold">Edit State: <span id="selectedAspectName" class="font-normal"></span></h2>
+                <div><label for="aspectText" class="block text-sm font-medium">Text Label:</label><input type="text" id="aspectText" class="themed-text-input mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
+                <div><label for="aspectSize" class="block text-sm font-medium">Size (Intensity): <span id="aspectSizeValue">50</span></label><input type="range" id="aspectSize" min="15" max="100" value="50" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"></div>
+                <div><label class="block text-sm font-medium">Color (Emotional Tone):</label><div id="colorPalette" class="mt-1 grid grid-cols-6 gap-1"></div></div>
+                <div id="connectionControls"><label class="block text-sm font-medium">Connection to NPC Core:</label><div class="mt-1 flex space-x-2"><button id="solidLineButton" data-line-type="solid" class="line-type-button flex-1 themed-button py-1 px-2 rounded-md text-sm">Solid</button><button id="dashedLineButton" data-line-type="dashed" class="line-type-button flex-1 themed-button py-1 px-2 rounded-md text-sm">Dashed</button><button id="noLineButton" data-line-type="none" class="line-type-button flex-1 themed-button py-1 px-2 rounded-md text-sm">None</button></div></div>
+                <div><label class="block text-sm font-medium">Aura Symbol (Modifier):</label><div id="auraSymbols" class="mt-1 grid grid-cols-5 gap-1"></div></div>
+                <div><label class="block text-sm font-medium">Waveform (Volatility):</label><div class="mt-1 flex items-center space-x-2"><button id="resonanceWaveButton" data-wave-type="sine" class="wave-type-button flex-1 themed-button py-1 px-2 rounded-md text-sm">Stable (Sine)</button><button id="dissonanceWaveButton" data-wave-type="sawtooth" class="wave-type-button flex-1 themed-button py-1 px-2 rounded-md text-sm">Volatile (Saw)</button></div><div class="mt-2 flex items-center space-x-2"><button id="noWaveButton" data-wave-type="none" class="wave-type-button flex-1 themed-button py-1 px-2 rounded-md text-sm">No Waveform</button></div><label for="waveAmplitude" class="block text-xs font-medium mt-2">Amplitude: <span id="waveAmplitudeValue">10</span></label><input type="range" id="waveAmplitude" min="5" max="30" value="10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"></div>
                 
                 <div class="pt-2 space-y-1">
                      <button id="elaborateStateButton" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow text-sm flex items-center justify-center">
@@ -264,18 +278,18 @@
                 </div>
 
                 <!-- Transitions Section -->
-                <div class="pt-3 border-t border-slate-200 space-y-2">
-                    <h3 class="text-md font-semibold text-slate-600">State Transitions</h3>
+                <div class="pt-3 themed-border border-t space-y-2">
+                    <h3 class="text-md font-semibold">State Transitions</h3>
                     <div>
-                        <label for="transitionTargetAspect" class="block text-sm font-medium text-slate-700">Target State:</label>
-                        <select id="transitionTargetAspect" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <label for="transitionTargetAspect" class="block text-sm font-medium">Target State:</label>
+                        <select id="transitionTargetAspect" class="themed-text-input mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             <option value="">Select target state...</option>
                         </select>
                     </div>
                     <div>
-                        <label for="transitionLabel" class="block text-sm font-medium text-slate-700">Transition Label (e.g., Trigger/Cause):</label>
+                        <label for="transitionLabel" class="block text-sm font-medium">Transition Label (e.g., Trigger/Cause):</label>
                         <div class="flex items-center space-x-2">
-                            <input type="text" id="transitionLabel" placeholder="e.g., Player fails quest" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <input type="text" id="transitionLabel" placeholder="e.g., Player fails quest" class="themed-text-input mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             <button id="suggestTransitionLabelsButton" class="mt-1 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-2.5 rounded-lg shadow text-sm flex items-center justify-center" title="Suggest Labels">
                                 ✨<span class="loading-spinner hidden ml-1"></span>
                             </button>
@@ -300,14 +314,14 @@
                 <button id="deleteAspectButton" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out mt-2">Delete State</button>
             </div>
 
-            <div id="npcCoreControls" class="space-y-3 hidden pt-4 border-t border-slate-200">
-                <h2 class="text-lg font-semibold text-slate-600">Edit NPC Core Node</h2>
-                <div><label class="block text-sm font-medium text-slate-700">Color (Base Emotional Tone):</label><div id="npcCoreColorPalette" class="mt-1 grid grid-cols-6 gap-1"></div></div>
-                <div><label for="npcCoreText" class="block text-sm font-medium text-slate-700">NPC Name / Identifier:</label><input type="text" id="npcCoreText" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
+            <div id="npcCoreControls" class="space-y-3 hidden pt-4 themed-border border-t">
+                <h2 class="text-lg font-semibold">Edit NPC Core Node</h2>
+                <div><label class="block text-sm font-medium">Color (Base Emotional Tone):</label><div id="npcCoreColorPalette" class="mt-1 grid grid-cols-6 gap-1"></div></div>
+                <div><label for="npcCoreText" class="block text-sm font-medium">NPC Name / Identifier:</label><input type="text" id="npcCoreText" class="themed-text-input mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
             </div>
 
-            <div class="pt-4 border-t border-slate-200 space-y-3">
-                <h2 class="text-lg font-semibold text-slate-600">Map Data & Profile</h2>
+            <div class="pt-4 themed-border border-t space-y-3">
+                <h2 class="text-lg font-semibold">Map Data & Profile</h2>
                 <button id="generateProfileButton" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow mb-2 flex items-center justify-center">
                     ✨ Generate NPC Emotional Profile <span class="loading-spinner hidden ml-2"></span>
                 </button>
@@ -315,10 +329,10 @@
                     Save Map (JSON)
                 </button>
                 <div>
-                    <label for="loadMapInput" class="block text-sm font-medium text-slate-700 mb-1">Load Map (JSON):</label>
-                    <input type="file" id="loadMapInput" accept=".json" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <label for="loadMapInput" class="block text-sm font-medium mb-1">Load Map (JSON):</label>
+                    <input type="file" id="loadMapInput" accept=".json" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 </div>
-                <h2 class="text-lg font-semibold text-slate-600 mt-3">Export Map</h2>
+                <h2 class="text-lg font-semibold mt-3">Export Map</h2>
                 <button id="exportPngButton" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
                     Export as PNG
                 </button>
@@ -327,8 +341,8 @@
                 </button>
             </div>
 
-            <div class="pt-4 border-t border-slate-200 space-y-3">
-                <h2 class="text-lg font-semibold text-slate-600">Help & Information</h2>
+            <div class="pt-4 themed-border border-t space-y-3">
+                <h2 class="text-lg font-semibold">Help & Information</h2>
                 <button id="apiKeyButton" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg shadow">
                     API Key Settings
                 </button>
@@ -340,20 +354,18 @@
                 </a>
             </div>
 
-            <!-- New Usage & Donations Section -->
-            <div class="pt-4 border-t border-slate-200 space-y-3">
-                <h2 class="text-lg font-semibold text-slate-600">Usage & Donations</h2>
-                <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-md border border-slate-200">
+            <div class="pt-4 themed-border border-t space-y-3">
+                <h2 class="text-lg font-semibold">Usage & Donations</h2>
+                <p class="info-box text-xs">
                     This tool is free to use for any non-commercial purpose. If you find it useful, please consider supporting my work with a donation.
                     <br><br>
-                    For any other use, including commercial projects, a license is required. Please reach out to me at <a href="mailto:hello@thorstenbecker.de" class="text-indigo-600 hover:underline font-medium">hello@thorstenbecker.de</a>.
+                    For any other use, including commercial projects, a license is required. Please reach out to me at <a href="mailto:hello@thorstenbecker.de">hello@thorstenbecker.de</a>.
                 </p>
-                <a href="https://ko-fi.com/thorstenbecker" target="_blank" rel="noopener noreferrer" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center text-base">
+                <a href="https://ko-fi.com/thorstenbecker" id="donationButton" target="_blank" rel="noopener noreferrer" class="w-full text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center text-base">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                     <span class="ml-2">Donate</span>
                 </a>
             </div>
-            <!-- End of New Section -->
 
         </div>
         <div id="copyrightNotice" class="control-panel-footer"></div>
@@ -361,38 +373,18 @@
 
     <div class="flex-1 p-4 order-1 md:order-2 flex justify-center items-center">
         <div class="canvas-container shadow-xl">
-             <canvas id="backgroundCanvas" class="bg-white"></canvas>
+             <canvas id="backgroundCanvas"></canvas>
              <canvas id="npcWeaverCanvas" class="bg-transparent"></canvas>
         </div>
     </div>
 
-    <!-- API Key Modal -->
-    <div id="apiKeyModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeApiKeyModalButton">&times;</span>
-            <h3 class="text-xl font-semibold mb-4">Google AI API Key</h3>
-            <p class="text-sm text-slate-600 mb-3">To use the AI features, you need a free API key from Google AI Studio.</p>
-            <div>
-                <label for="apiKeyInput" class="block text-sm font-medium text-slate-700">Your API Key:</label>
-                <input type="password" id="apiKeyInput" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Enter your API key">
-            </div>
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sm text-indigo-600 hover:underline mt-2 inline-block">Get your API key from Google AI Studio &rarr;</a>
-            <div class="flex justify-end space-x-3 mt-6">
-                <button id="apiKeyCancelButton" class="bg-gray-300 hover:bg-gray-400 text-slate-700 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button>
-                <button id="apiKeySaveButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Save Key</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Generic Text Input Modal -->
-    <div id="textInputModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeModalButton">&times;</span><h3 id="modalTitle" class="text-xl font-semibold mb-4">Enter Text</h3><input type="text" id="modalTextInput" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"><button id="modalSaveButton" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow">Save</button></div></div>
-    <!-- Message Modal -->
-    <div id="messageModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeMessageModalButton">&times;</span><h3 id="messageModalTitle" class="text-xl font-semibold mb-2">Notification</h3><p id="messageModalText" class="text-sm text-slate-700"></p><button id="messageModalOkButton" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">OK</button></div></div>
-    <!-- Narrative/Profile/Elaboration Modal (Consolidated) -->
-    <div id="generatedContentModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeGeneratedContentModalButton">&times;</span><h3 id="generatedContentModalTitle" class="text-xl font-semibold mb-4">Generated Content</h3><textarea id="generatedContentModalTextarea" readonly class="w-full min-h-[200px] md:min-h-[300px] p-2 border border-slate-300 rounded-md"></textarea><div class="flex justify-end space-x-2 mt-4"><button id="generatedContentModalCopyButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">Copy to Clipboard</button><button id="generatedContentModalCloseButton" class="bg-gray-300 hover:bg-gray-400 text-slate-700 font-semibold py-2 px-4 rounded-lg shadow">Close</button></div></div></div>
-    <!-- Quick Help Modal -->
-    <div id="quickHelpModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeQuickHelpModalButton">&times;</span><h3 class="text-xl font-semibold mb-4">Quick Help - NPC Emotion Weaver</h3><div id="quickHelpContent" class="text-sm text-slate-700 help-modal-content space-y-4">
-    <p><strong>NPC Emotion Weaver</strong> is a visual tool for designing and mapping the emotional states of Non-Player Characters (NPCs). Inspired by the Fuzzy Emotion Mapping System (FEMS), it helps you externalize and explore an NPC's internal landscape by visualizing how their emotions relate, resonate, and shift. This version is enhanced with AI-powered features to assist in character development.</p>
+    <!-- Modals -->
+    <div id="apiKeyModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeApiKeyModalButton">&times;</span><h3 class="text-xl font-semibold mb-4">Google AI API Key</h3> <p class="text-sm mb-3">To use the AI features, you need a free API key from Google AI Studio.</p><div><label for="apiKeyInput" class="block text-sm font-medium">Your API Key:</label><input type="password" id="apiKeyInput" class="themed-text-input mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Enter your API key"></div><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sm text-indigo-600 hover:underline mt-2 inline-block">Get your API key from Google AI Studio &rarr;</a><div class="flex justify-end space-x-3 mt-6"><button id="apiKeyCancelButton" class="themed-button bg-gray-300 hover:bg-gray-400 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button><button id="apiKeySaveButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Save Key</button></div></div></div>
+    <div id="textInputModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeModalButton">&times;</span><h3 id="modalTitle" class="text-xl font-semibold mb-4">Enter Text</h3><input type="text" id="modalTextInput" class="themed-text-input w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"><button id="modalSaveButton" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow">Save</button></div></div>
+    <div id="messageModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeMessageModalButton">&times;</span><h3 id="messageModalTitle" class="text-xl font-semibold mb-2">Notification</h3><p id="messageModalText" class="text-sm"></p><button id="messageModalOkButton" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">OK</button></div></div>
+    <div id="generatedContentModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeGeneratedContentModalButton">&times;</span><h3 id="generatedContentModalTitle" class="text-xl font-semibold mb-4">Generated Content</h3><textarea id="generatedContentModalTextarea" readonly class="w-full min-h-[200px] md:min-h-[300px] p-2 border rounded-md"></textarea><div class="flex justify-end space-x-2 mt-4"><button id="generatedContentModalCopyButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">Copy to Clipboard</button><button id="generatedContentModalCloseButton" class="themed-button bg-gray-300 hover:bg-gray-400 font-semibold py-2 px-4 rounded-lg shadow">Close</button></div></div></div>
+    <div id="quickHelpModal" class="modal"> <div class="modal-content"><span class="close-button" id="closeQuickHelpModalButton">&times;</span><h3 class="text-xl font-semibold mb-4">Quick Help - NPC Emotion Weaver</h3><div id="quickHelpContent" class="text-sm help-modal-content space-y-4">
+        <p><strong>NPC Emotion Weaver</strong> is a visual tool for designing and mapping the emotional states of Non-Player Characters (NPCs). Inspired by the Fuzzy Emotion Mapping System (FEMS), it helps you externalize and explore an NPC's internal landscape by visualizing how their emotions relate, resonate, and shift. This version is enhanced with AI-powered features to assist in character development.</p>
     
     <div>
         <h4 class="font-semibold text-base text-slate-800">Core Concepts</h4>
@@ -484,17 +476,7 @@
         <p class="text-xs text-slate-600">&copy; 2024 Thorsten Becker, <a href="https://www.thorstenbecker.de" target="_blank" class="text-indigo-600 hover:underline">www.thorstenbecker.de</a></p>
     </div>
 </div><button id="quickHelpModalCloseButton" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">OK</button></div></div>
-    <!-- Confirm Clear Modal -->
-    <div id="confirmClearModal" class="modal">
-        <div class="modal-content">
-            <h3 id="confirmClearModalTitle" class="text-xl font-semibold mb-4">Confirm Action</h3>
-            <p id="confirmClearModalText" class="text-sm text-slate-700 mb-6">Are you sure you want to clear the entire map? This action cannot be undone.</p>
-            <div class="flex justify-end space-x-3">
-                <button id="confirmClearCancelButton" class="bg-gray-300 hover:bg-gray-400 text-slate-700 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button>
-                <button id="confirmClearOkButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Clear Map</button>
-            </div>
-        </div>
-    </div>
+    <div id="confirmClearModal" class="modal"> <div class="modal-content"><h3 id="confirmClearModalTitle" class="text-xl font-semibold mb-4">Confirm Action</h3><p id="confirmClearModalText" class="text-sm mb-6">Are you sure you want to clear the entire map? This action cannot be undone.</p><div class="flex justify-end space-x-3"><button id="confirmClearCancelButton" class="themed-button bg-gray-300 hover:bg-gray-400 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button><button id="confirmClearOkButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Clear Map</button></div></div></div>
 
 <script>
         // --- Canvas Setup ---
@@ -505,6 +487,7 @@
         let canvasContainer = npcWeaverCanvas.parentElement;
 
         // --- DOM Elements ---
+        const themeSelector = document.getElementById('themeSelector');
         const addAspectButton = document.getElementById('addAspectButton'); 
         const undeleteAspectButton = document.getElementById('undeleteAspectButton');
         const clearMapButton = document.getElementById('clearMapButton');
@@ -531,21 +514,18 @@
         const zoomInButton = document.getElementById('zoomInButton');
         const zoomOutButton = document.getElementById('zoomOutButton');
         
-        // Gemini Feature Buttons
+        // --- Modals, Buttons, etc. ---
         const generateProfileButton = document.getElementById('generateProfileButton');
         const elaborateStateButton = document.getElementById('elaborateStateButton');
         const suggestDialogueButton = document.getElementById('suggestDialogueButton');
         const suggestTransitionLabelsButton = document.getElementById('suggestTransitionLabelsButton');
         const transitionLabelSuggestionsUl = document.getElementById('transitionLabelSuggestions');
-
-
         const generatedContentModal = document.getElementById('generatedContentModal');
         const closeGeneratedContentModalButton = document.getElementById('closeGeneratedContentModalButton');
         const generatedContentModalTitle = document.getElementById('generatedContentModalTitle');
         const generatedContentModalTextarea = document.getElementById('generatedContentModalTextarea');
         const generatedContentModalCopyButton = document.getElementById('generatedContentModalCopyButton');
         const generatedContentModalCloseButton = document.getElementById('generatedContentModalCloseButton');
-        
         const quickHelpButton = document.getElementById('quickHelpButton');
         const quickHelpModal = document.getElementById('quickHelpModal');
         const closeQuickHelpModalButton = document.getElementById('closeQuickHelpModalButton');
@@ -580,11 +560,47 @@
         const apiKeyInput = document.getElementById('apiKeyInput');
         const apiKeySaveButton = document.getElementById('apiKeySaveButton');
         const apiKeyCancelButton = document.getElementById('apiKeyCancelButton');
-
         const lineTypeButtons = document.querySelectorAll('.line-type-button');
         const waveTypeButtons = document.querySelectorAll('.wave-type-button');
 
         // --- Configuration ---
+        const THEMES = {
+            'default-light': {
+                '--bg-body': '#f1f5f9', '--text-main': '#1e293b', '--bg-panel': '#ffffff', '--bg-canvas': '#ffffff', '--border-color': '#e5e7eb',
+                '--control-bg': '#e5e7eb', '--control-hover-bg': '#d1d5db', '--control-text': '#374151', '--ring-color': 'rgba(100, 100, 100, 0.2)',
+                '--ring-glow-color': 'transparent', '--grid-color': 'rgba(0, 0, 0, 0.1)', '--transition-arrow-color': '#334155',
+                '--transition-label-color': '#475569', '--donation-bg': '#22c55e', '--donation-hover-bg': '#16a34a', '--font-main': "'Inter', sans-serif",
+                '--text-muted': '#6b7280', '--bg-info-box': '#f8fafc', '--border-info-box': '#e2e8f0', '--text-info-box': '#475569', '--link-color': '#4f46e5'
+            },
+            'writer-parchment': {
+                '--bg-body': '#FDF6E3', '--text-main': '#586E75', '--bg-panel': '#F5EBDC', '--bg-canvas': '#FDF6E3', '--border-color': '#DCD0B9',
+                '--control-bg': '#EAE0C7', '--control-hover-bg': '#DCD0B9', '--control-text': '#657B83', '--ring-color': 'rgba(88, 110, 117, 0.3)',
+                '--ring-glow-color': 'transparent', '--grid-color': 'rgba(88, 110, 117, 0.15)', '--transition-arrow-color': '#657B83',
+                '--transition-label-color': '#657B83', '--donation-bg': '#859900', '--donation-hover-bg': '#6c7d00', '--font-main': "'Special Elite', cursive",
+                '--text-muted': '#93a1a1', '--bg-info-box': '#eee8d5', '--border-info-box': '#dcd0b9', '--text-info-box': '#657b83', '--link-color': '#268bd2'
+            },
+            'codex-night': {
+                '--bg-body': '#1e293b', '--text-main': '#e2e8f0', '--bg-panel': '#0f172a', '--bg-canvas': '#1e293b', '--border-color': '#334155',
+                '--control-bg': '#334155', '--control-hover-bg': '#475569', '--control-text': '#e2e8f0', '--ring-color': 'rgba(148, 163, 184, 0.3)',
+                '--ring-glow-color': 'rgba(147, 197, 253, 0.2)', '--grid-color': 'rgba(255, 255, 255, 0.1)', '--transition-arrow-color': '#94a3b8',
+                '--transition-label-color': '#94a3b8', '--donation-bg': '#10b981', '--donation-hover-bg': '#059669', '--font-main': "'Inter', sans-serif",
+                '--text-muted': '#94a3b8', '--bg-info-box': '#1e293b', '--border-info-box': '#334155', '--text-info-box': '#cbd5e1', '--link-color': '#818cf8'
+            },
+            'arcade-dark': {
+                '--bg-body': '#111827', '--text-main': '#d1d5db', '--bg-panel': '#1f2937', '--bg-canvas': '#111827', '--border-color': '#374151',
+                '--control-bg': '#374151', '--control-hover-bg': '#4b5563', '--control-text': '#d1d5db', '--ring-color': 'rgba(74, 222, 128, 0.4)',
+                '--ring-glow-color': 'rgba(236, 72, 153, 0.3)', '--grid-color': 'rgba(255, 255, 255, 0.1)', '--transition-arrow-color': '#a5b4fc',
+                '--transition-label-color': '#a5b4fc', '--donation-bg': '#ec4899', '--donation-hover-bg': '#db2777', '--font-main': "'VT323', monospace",
+                '--text-muted': '#9ca3af', '--bg-info-box': '#1f2937', '--border-info-box': '#374151', '--text-info-box': '#d1d5db', '--link-color': '#ec4899'
+            },
+            'blueprint': {
+                '--bg-body': '#2E3B4E', '--text-main': '#FFFFFF', '--bg-panel': '#3A4A60', '--bg-canvas': '#2E3B4E', '--border-color': '#4B5A70',
+                '--control-bg': '#4B5A70', '--control-hover-bg': '#5C6C82', '--control-text': '#FFFFFF', '--ring-color': 'rgba(135, 206, 250, 0.5)',
+                '--ring-glow-color': 'rgba(135, 206, 250, 0.2)', '--grid-color': 'rgba(135, 206, 250, 0.2)', '--transition-arrow-color': '#ADD8E6',
+                '--transition-label-color': '#ADD8E6', '--donation-bg': '#FFD700', '--donation-hover-bg': '#B89B00', '--font-main': "'Inter', sans-serif",
+                '--text-muted': '#90A4BB', '--bg-info-box': '#2E3B4E', '--border-info-box': '#4B5A70', '--text-info-box': '#CFD8DC', '--link-color': '#FFD700'
+            }
+        };
         const FEMS_COLORS = { 
             GREEN: { value: '#4ade80', name: 'Positive, Stable', tooltip: 'Contentment, joy, hope, calm' }, 
             YELLOW: { value: '#facc15', name: 'Anticipation, Active', tooltip: 'Excitement, anxiety, curiosity, alert' }, 
@@ -621,8 +637,6 @@
 
         const FONT_SIZE_STANDARD = 12; const MAX_SCALED_FONT_SIZE = 18; const FONT_SCALING_DIVISOR = 3.5; const MAX_TEXT_WIDTH_FACTOR = 1.7;
         const MIN_ZOOM = 0.2; const MAX_ZOOM = 3.0; const ZOOM_SENSITIVITY = 0.001; const ZOOM_BUTTON_FACTOR = 1.2;
-        const TRANSITION_ARROW_COLOR = '#334155'; 
-        const TRANSITION_LABEL_COLOR = '#475569'; 
 
         // --- State Management ---
         const state = {
@@ -652,51 +666,59 @@
                 hasShownClusterWarning: false,
                 currentEditingCircleForModal: null,
                 isLLMLoading: false,
+                currentTheme: 'default-light'
             }
         };
-
-        // --- API Key Management ---
-        function saveApiKey(key) {
-            try {
-                localStorage.setItem('npcWeaverApiKey', key);
-                state.apiKey = key;
-                showMessage("Success", "API Key saved successfully.");
-            } catch (e) {
-                console.error("Could not save API key to localStorage:", e);
-                showMessage("Error", "Could not save API key. Your browser might have localStorage disabled.");
+        
+        // --- Theming ---
+        function applyTheme(themeName) {
+            const theme = THEMES[themeName] || THEMES['default-light'];
+            const root = document.documentElement;
+            for (const [key, value] of Object.entries(theme)) {
+                root.style.setProperty(key, value);
             }
+            state.ui.currentTheme = themeName;
+            
+            drawAll();
         }
 
-        function loadApiKey() {
+        function saveTheme(themeName) {
             try {
-                const savedKey = localStorage.getItem('npcWeaverApiKey');
-                if (savedKey) {
-                    state.apiKey = savedKey;
-                    console.log("API Key loaded from localStorage.");
-                }
+                localStorage.setItem('npcWeaverTheme', themeName);
             } catch (e) {
-                console.error("Could not load API key from localStorage:", e);
+                console.warn("Could not save theme to localStorage:", e);
             }
         }
         
-        function getApiKey() {
-            return state.apiKey || "";
+        function loadTheme() {
+            try {
+                const savedTheme = localStorage.getItem('npcWeaverTheme');
+                if (savedTheme && THEMES[savedTheme]) {
+                    themeSelector.value = savedTheme;
+                    applyTheme(savedTheme);
+                } else {
+                    applyTheme('default-light');
+                }
+            } catch (e) {
+                console.warn("Could not load theme from localStorage:", e);
+                applyTheme('default-light');
+            }
         }
 
+        themeSelector.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+            saveTheme(e.target.value);
+        });
+
+        // --- API Key Management ---
+        function saveApiKey(key) { try { localStorage.setItem('npcWeaverApiKey', key); state.apiKey = key; showMessage("Success", "API Key saved successfully."); } catch (e) { console.error("Could not save API key to localStorage:", e); showMessage("Error", "Could not save API key. Your browser might have localStorage disabled."); } }
+        function loadApiKey() { try { const savedKey = localStorage.getItem('npcWeaverApiKey'); if (savedKey) { state.apiKey = savedKey; console.log("API Key loaded from localStorage."); } } catch (e) { console.error("Could not load API key from localStorage:", e); } }
+        function getApiKey() { return state.apiKey || ""; }
+
         // --- Helper Functions ---
-        const getSelectedCircle = () => {
-            if (!state.selectedCircleId) return null;
-            if (state.selectedCircleId === 'npcCore') return state.npcCore; 
-            return state.aspects.find(a => a.id === state.selectedCircleId);
-        };
-        const getDraggingCircle = () => {
-            if (!state.draggingCircleId) return null;
-            return state.aspects.find(a => a.id === state.draggingCircleId);
-        };
-        function setCopyright() { 
-            const currentYear = new Date().getFullYear(); 
-            copyrightNoticeDiv.innerHTML = `&copy; ${currentYear} Thorsten Becker, <a href="https://www.thorstenbecker.de" target="_blank" class="hover:underline text-slate-700">www.thorstenbecker.de</a>`;
-        }
+        const getSelectedCircle = () => { if (!state.selectedCircleId) return null; if (state.selectedCircleId === 'npcCore') return state.npcCore; return state.aspects.find(a => a.id === state.selectedCircleId); };
+        const getDraggingCircle = () => { if (!state.draggingCircleId) return null; return state.aspects.find(a => a.id === state.draggingCircleId); };
+        function setCopyright() { const currentYear = new Date().getFullYear(); copyrightNoticeDiv.innerHTML = `&copy; ${currentYear} Thorsten Becker, <a href="https://www.thorstenbecker.de" target="_blank" class="hover:underline">www.thorstenbecker.de</a>`; }
         
         // --- Gemini API Integration ---
         async function callGemini(prompt, isJsonOutput = false) {
@@ -715,10 +737,9 @@
             };
             
             let activeLoadingSpinner = null;
-            // Determine which button triggered the call to show its spinner
             if (document.activeElement && buttonLoadingStates[document.activeElement.id]) {
                 activeLoadingSpinner = buttonLoadingStates[document.activeElement.id];
-            } else if (state.ui.lastGeminiButtonId && buttonLoadingStates[state.ui.lastGeminiButtonId]) { // Fallback if activeElement isn't set fast enough
+            } else if (state.ui.lastGeminiButtonId && buttonLoadingStates[state.ui.lastGeminiButtonId]) {
                  activeLoadingSpinner = buttonLoadingStates[state.ui.lastGeminiButtonId];
             }
 
@@ -734,7 +755,6 @@
             if (isJsonOutput) {
                 payload.generationConfig = {
                     responseMimeType: "application/json",
-                    // Basic schema for a list of strings (transition labels)
                     responseSchema: {
                         type: "ARRAY",
                         items: { type: "STRING" }
@@ -787,7 +807,6 @@
                 state.ui.lastGeminiButtonId = null; 
             }
         }
-
 
         // --- Core Application Logic (Drawing, Interaction, etc.) ---
         function resetNpcCoreToDefaults() { 
@@ -844,11 +863,13 @@
             const devicePixelRatio = window.devicePixelRatio || 1;
             const logicalCanvasWidth = backgroundCanvas.width / devicePixelRatio;
             const logicalCanvasHeight = backgroundCanvas.height / devicePixelRatio;
+            const theme = THEMES[state.ui.currentTheme];
+            
             backgroundCtx.save();
             backgroundCtx.scale(devicePixelRatio, devicePixelRatio);
             backgroundCtx.clearRect(0, 0, logicalCanvasWidth, logicalCanvasHeight);
             
-            backgroundCtx.fillStyle = 'white';
+            backgroundCtx.fillStyle = theme['--bg-canvas'];
             backgroundCtx.fillRect(0,0,logicalCanvasWidth,logicalCanvasHeight);
             
             backgroundCtx.translate(state.view.panX, state.view.panY);
@@ -859,7 +880,8 @@
         }
 
         function drawGrid() { 
-            backgroundCtx.strokeStyle = 'rgba(0, 0, 0, 0.1)'; 
+            const theme = THEMES[state.ui.currentTheme];
+            backgroundCtx.strokeStyle = theme['--grid-color'];
             backgroundCtx.lineWidth = 0.5 / state.view.scale; 
             const logicalCanvasWidth = npcWeaverCanvas.width / (window.devicePixelRatio||1); 
             const logicalCanvasHeight = npcWeaverCanvas.height / (window.devicePixelRatio||1); 
@@ -874,19 +896,35 @@
         }
         function drawConcentricRings() { 
             if (!state.npcCore) return; 
-            backgroundCtx.strokeStyle = 'rgba(100,100,100,0.2)'; 
+            const theme = THEMES[state.ui.currentTheme];
+            backgroundCtx.strokeStyle = theme['--ring-color']; 
             backgroundCtx.lineWidth = 1 / state.view.scale; 
             backgroundCtx.setLineDash([5/state.view.scale, 5/state.view.scale]); 
+
+            if (theme['--ring-glow-color'] && theme['--ring-glow-color'] !== 'transparent') {
+                backgroundCtx.shadowColor = theme['--ring-glow-color'];
+                backgroundCtx.shadowBlur = 10;
+            }
+
             CONCENTRIC_RING_RADII.forEach(radius => { backgroundCtx.beginPath(); backgroundCtx.arc(state.npcCore.x, state.npcCore.y, radius, 0, Math.PI * 2); backgroundCtx.stroke(); }); 
+            
             backgroundCtx.setLineDash([]);
+            backgroundCtx.shadowColor = 'transparent';
+            backgroundCtx.shadowBlur = 0;
         }
         
         function drawCircle(circle, targetCtx = ctx) {
+            const theme = THEMES[state.ui.currentTheme];
+            const font = theme['--font-main'];
+            
             targetCtx.beginPath();
             targetCtx.arc(circle.x, circle.y, circle.radius, 0, Math.PI*2);
             targetCtx.fillStyle = circle.color;
             targetCtx.fill();
-            targetCtx.strokeStyle = '#374151'; 
+
+            const isDarkTheme = ['codex-night', 'arcade-dark', 'blueprint'].includes(state.ui.currentTheme);
+            targetCtx.strokeStyle = isDarkTheme ? '#f1f5f9' : '#374151';
+
             targetCtx.lineWidth = (circle.id === state.selectedCircleId && targetCtx === ctx ? 3 : 1.5)/state.view.scale;
             targetCtx.stroke();
 
@@ -894,10 +932,10 @@
             targetCtx.textAlign = 'center';
             targetCtx.textBaseline = 'middle';
             
-            const layout = calculateTextLayout(circle.text, circle.radius, targetCtx);
+            const layout = calculateTextLayout(circle.text, circle.radius, targetCtx, font);
             const { fontSize, lines } = layout;
             
-            targetCtx.font = `bold ${fontSize}px Inter, sans-serif`;
+            targetCtx.font = `bold ${fontSize}px ${font}`;
             const lineHeight = fontSize * 1.2;
             const totalTextHeight = lines.length * lineHeight;
             let startY = circle.y - (totalTextHeight / 2) + (lineHeight / 2);
@@ -911,7 +949,7 @@
 
             if (circle.aura && circle.aura.symbol.trim() !== '') {
                 const symbolSize = fontSize * 1.5; 
-                targetCtx.font = `${symbolSize}px Inter, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif`;
+                targetCtx.font = `${symbolSize}px ${font}, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"`;
                 targetCtx.fillText(circle.aura.symbol, circle.x + circle.radius*0.5, circle.y - circle.radius*0.5);
             }
 
@@ -920,19 +958,19 @@
             }
         }
 
-        function calculateTextLayout(text, radius, context) {
+        function calculateTextLayout(text, radius, context, font) {
             const maxTextWidth = radius * MAX_TEXT_WIDTH_FACTOR;
             let idealScaledFontSize = Math.min(MAX_SCALED_FONT_SIZE, Math.max(FONT_SIZE_STANDARD, radius / FONT_SCALING_DIVISOR));
             let finalFontSize = FONT_SIZE_STANDARD;
 
             for (let currentTestSize = Math.floor(idealScaledFontSize); currentTestSize >= FONT_SIZE_STANDARD; currentTestSize--) {
-                context.font = `bold ${currentTestSize}px Inter, sans-serif`;
+                context.font = `bold ${currentTestSize}px ${font}`;
                 if (context.measureText(text).width <= maxTextWidth) {
                     finalFontSize = currentTestSize;
                     break;
                 }
             }
-            context.font = `bold ${finalFontSize}px Inter, sans-serif`;
+            context.font = `bold ${finalFontSize}px ${font}`;
 
             const words = text.split(' ');
             let currentLine = '';
@@ -969,6 +1007,8 @@
         }
 
         function drawLineToNpcCore(fromCircle, toNpcCore, lineType, targetCtx = ctx) { 
+            const theme = THEMES[state.ui.currentTheme];
+            const isDarkTheme = ['codex-night', 'arcade-dark', 'blueprint'].includes(state.ui.currentTheme);
             targetCtx.beginPath(); 
             const angle = Math.atan2(toNpcCore.y-fromCircle.y, toNpcCore.x-fromCircle.x); 
             const startX = fromCircle.x+fromCircle.radius*Math.cos(angle); 
@@ -977,7 +1017,7 @@
             const endY = toNpcCore.y-toNpcCore.radius*Math.sin(angle); 
             targetCtx.moveTo(startX, startY); 
             targetCtx.lineTo(endX, endY); 
-            targetCtx.strokeStyle = '#374151'; 
+            targetCtx.strokeStyle = isDarkTheme ? '#f1f5f9' : '#374151';
             targetCtx.lineWidth = 2/state.view.scale; 
             if(lineType === 'dashed') targetCtx.setLineDash([10/state.view.scale, 5/state.view.scale]); 
             else targetCtx.setLineDash([]); 
@@ -986,6 +1026,7 @@
         }
         
         function drawTransitionArrow(sourceAspect, targetAspect, label, targetCtx = ctx) {
+            const theme = THEMES[state.ui.currentTheme];
             const angle = Math.atan2(targetAspect.y - sourceAspect.y, targetAspect.x - sourceAspect.x);
             const arrowLength = 15 / state.view.scale;
             const arrowWidth = 8 / state.view.scale;
@@ -998,7 +1039,7 @@
             targetCtx.beginPath();
             targetCtx.moveTo(startX, startY);
             targetCtx.lineTo(endX, endY);
-            targetCtx.strokeStyle = TRANSITION_ARROW_COLOR;
+            targetCtx.strokeStyle = theme['--transition-arrow-color'];
             targetCtx.lineWidth = 1.5 / state.view.scale;
             targetCtx.stroke();
 
@@ -1007,7 +1048,7 @@
             targetCtx.lineTo(endX - arrowLength * Math.cos(angle - Math.PI / 7), endY - arrowLength * Math.sin(angle - Math.PI / 7));
             targetCtx.lineTo(endX - arrowLength * Math.cos(angle + Math.PI / 7), endY - arrowLength * Math.sin(angle + Math.PI / 7));
             targetCtx.closePath();
-            targetCtx.fillStyle = TRANSITION_ARROW_COLOR;
+            targetCtx.fillStyle = theme['--transition-arrow-color'];
             targetCtx.fill();
 
             if (label) {
@@ -1016,8 +1057,8 @@
                 const labelOffsetX = 10 / state.view.scale * Math.sin(angle); 
                 const labelOffsetY = -10 / state.view.scale * Math.cos(angle);
 
-                targetCtx.font = `italic ${Math.max(8, 10 / state.view.scale)}px Inter, sans-serif`;
-                targetCtx.fillStyle = TRANSITION_LABEL_COLOR;
+                targetCtx.font = `italic ${Math.max(8, 10 / state.view.scale)}px ${theme['--font-main']}`;
+                targetCtx.fillStyle = theme['--transition-label-color'];
                 targetCtx.textAlign = 'center';
                 targetCtx.textBaseline = 'middle';
                 targetCtx.fillText(label, midX + labelOffsetX, midY + labelOffsetY);
@@ -1223,7 +1264,6 @@
         closeQuickHelpModalButton.onclick = () => quickHelpModal.style.display = "none"; quickHelpModalCloseButton.onclick = () => quickHelpModal.style.display = "none"; 
         quickHelpButton.onclick = () => { quickHelpModal.style.display = "block"; const quickHelpContentDiv = quickHelpModal.querySelector('.help-modal-content'); if (quickHelpContentDiv) quickHelpContentDiv.scrollTop = 0; };
         
-        // --- API Key Modal Listeners ---
         apiKeyButton.onclick = () => {
             apiKeyInput.value = getApiKey();
             apiKeyModal.style.display = "block";
@@ -1262,10 +1302,10 @@
                     aspectSize.value = selectedCircle.radius;
                     aspectSizeValue.textContent = selectedCircle.radius;
                     colorPaletteContainer.querySelectorAll('.color-palette-button').forEach(btn => btn.classList.toggle('selected', btn.dataset.color === selectedCircle.color));
-                    lineTypeButtons.forEach(btn => { const isSelected = btn.dataset.lineType === selectedCircle.connectionToNpcCore; btn.classList.toggle('bg-blue-500',isSelected); btn.classList.toggle('text-white',isSelected); btn.classList.toggle('bg-slate-200',!isSelected); btn.classList.toggle('text-slate-700',!isSelected);});
+                    lineTypeButtons.forEach(btn => { const isSelected = btn.dataset.lineType === selectedCircle.connectionToNpcCore; btn.classList.toggle('bg-blue-500',isSelected); btn.classList.toggle('text-white',isSelected); btn.classList.toggle('themed-button',!isSelected); btn.classList.toggle('bg-slate-200',!isSelected); btn.classList.toggle('text-slate-700',!isSelected);});
                     document.querySelectorAll('#auraSymbols .symbol-button').forEach(btn => btn.classList.toggle('selected', selectedCircle.aura && btn.dataset.symbolName === selectedCircle.aura.name));
                     const wf = selectedCircle.waveform || {type:'none', amplitude:10};
-                    waveTypeButtons.forEach(btn => { const isSelected = btn.dataset.waveType === wf.type; btn.classList.toggle('bg-blue-500',isSelected); btn.classList.toggle('text-white',isSelected); btn.classList.toggle('bg-slate-200',!isSelected); btn.classList.toggle('text-slate-700',!isSelected);});
+                    waveTypeButtons.forEach(btn => { const isSelected = btn.dataset.waveType === wf.type; btn.classList.toggle('bg-blue-500',isSelected); btn.classList.toggle('text-white',isSelected); btn.classList.toggle('themed-button',!isSelected); btn.classList.toggle('bg-slate-200',!isSelected); btn.classList.toggle('text-slate-700',!isSelected);});
                     waveAmplitude.value = wf.amplitude;
                     waveAmplitudeValue.textContent = wf.amplitude;
                     waveAmplitude.disabled = wf.type === 'none';
@@ -1386,6 +1426,7 @@
         aspectSize.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) {selectedCircle.radius = parseInt(e.target.value); aspectSizeValue.textContent = selectedCircle.radius; draw();}});
         
         function populateColorPalette(container, forNpcCore=false) { 
+            container.innerHTML = ''; // Clear previous
             Object.values(FEMS_COLORS).forEach(color => { 
                 const button=document.createElement('button'); button.classList.add('color-palette-button'); button.style.backgroundColor=color.value; button.dataset.color=color.value; 
                 const tooltipSpan=document.createElement('span'); tooltipSpan.classList.add('tooltiptext'); tooltipSpan.textContent=`${color.name}: ${color.tooltip}`; 
@@ -1396,6 +1437,8 @@
         populateColorPalette(colorPaletteContainer, false); populateColorPalette(npcCoreColorPaletteContainer, true);
         
         lineTypeButtons.forEach(button => button.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) {selectedCircle.connectionToNpcCore = button.dataset.lineType==='none' ? null : button.dataset.lineType; updateControls(); draw();}})); 
+        
+        auraSymbolsContainer.innerHTML = ''; // Clear previous
         Object.values(AURA_SYMBOLS).forEach(aura => { const button=document.createElement('button'); button.classList.add('symbol-button','hover:bg-slate-200'); button.textContent=aura.symbol; button.dataset.symbolName=aura.name; const tooltipSpan=document.createElement('span'); tooltipSpan.classList.add('tooltiptext'); tooltipSpan.textContent=`${aura.name}: ${aura.tooltip}`; const wrapper=document.createElement('div'); wrapper.classList.add('tooltip'); wrapper.appendChild(button); wrapper.appendChild(tooltipSpan); button.addEventListener('click', ()=>{ const selectedCircle = getSelectedCircle(); if(selectedCircle){if(selectedCircle.aura && selectedCircle.aura.name===aura.name) selectedCircle.aura=null; else selectedCircle.aura = aura.name==='None' ? null:aura; updateControls(); draw();}}); auraSymbolsContainer.appendChild(wrapper);});
         waveTypeButtons.forEach(button => button.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) { if (!selectedCircle.waveform) selectedCircle.waveform = {type:'none',amplitude:10}; selectedCircle.waveform.type = button.dataset.waveType; waveAmplitude.disabled = selectedCircle.waveform.type==='none'; updateControls(); draw();}}));
         waveAmplitude.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore && selectedCircle.waveform) {selectedCircle.waveform.amplitude = parseInt(e.target.value); waveAmplitudeValue.textContent = selectedCircle.waveform.amplitude; draw();}});
@@ -1561,9 +1604,8 @@
         });
 
         transitionLabelInput.addEventListener('focusout', () => {
-            // Delay hiding to allow click on suggestion list
             setTimeout(() => {
-                if (!transitionLabelSuggestionsUl.matches(':hover')) { // Don't hide if mouse is over suggestions
+                if (!transitionLabelSuggestionsUl.matches(':hover')) { 
                     transitionLabelSuggestionsUl.classList.add('hidden');
                 }
             }, 200);
@@ -1613,15 +1655,19 @@
         function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'}[c]));}
         
         function addCircleToSvg(circle, elementsArray, tempCtxForMeasure) {
-            elementsArray.push(`<circle cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" fill="${circle.color}" stroke="#374151" stroke-width="1.5" />`);
+            const font = THEMES[state.ui.currentTheme]['--font-main'];
+            const isDarkTheme = ['codex-night', 'arcade-dark', 'blueprint'].includes(state.ui.currentTheme);
+            const strokeColor = isDarkTheme ? '#f1f5f9' : '#374151';
+            
+            elementsArray.push(`<circle cx="${circle.x}" cy="${circle.y}" r="${circle.radius}" fill="${circle.color}" stroke="${strokeColor}" stroke-width="1.5" />`);
             const textColor = kontrastFarbe(circle.color);
-            const { fontSize: finalFontSizeSvg, lines: svgTextLines } = calculateTextLayout(circle.text, circle.radius, tempCtxForMeasure);
+            const { fontSize: finalFontSizeSvg, lines: svgTextLines } = calculateTextLayout(circle.text, circle.radius, tempCtxForMeasure, font);
 
             const lineHeight = finalFontSizeSvg * 1.2; 
             const totalTextHeight = svgTextLines.length * lineHeight; 
             let startYText = circle.y - (totalTextHeight / 2) + (lineHeight / 2) - (finalFontSizeSvg * 0.1); 
             
-            let textSVG = `<text x="${circle.x}" y="${startYText}" font-family="Inter, sans-serif" font-size="${finalFontSizeSvg}" font-weight="bold" text-anchor="middle" fill="${textColor}" dominant-baseline="central">`; 
+            let textSVG = `<text x="${circle.x}" y="${startYText}" font-family="${font}" font-size="${finalFontSizeSvg}" font-weight="bold" text-anchor="middle" fill="${textColor}" dominant-baseline="central">`; 
             svgTextLines.forEach((line, index) => {
                 textSVG += `<tspan x="${circle.x}" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`;
             });
@@ -1630,7 +1676,7 @@
 
             if (circle.aura && circle.aura.symbol.trim() !== '') { 
                 const symbolSize = finalFontSizeSvg * 1.5; 
-                elementsArray.push(`<text x="${(circle.x + circle.radius*0.5).toFixed(2)}" y="${(circle.y - circle.radius*0.5).toFixed(2)}" font-family="Inter, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif" font-size="${symbolSize}" text-anchor="middle" dominant-baseline="central">${escapeXml(circle.aura.symbol)}</text>`);
+                elementsArray.push(`<text x="${(circle.x + circle.radius*0.5).toFixed(2)}" y="${(circle.y - circle.radius*0.5).toFixed(2)}" font-family="${font}, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'" font-size="${symbolSize}" text-anchor="middle" dominant-baseline="central">${escapeXml(circle.aura.symbol)}</text>`);
             } 
             if (circle.waveform && circle.waveform.type !== 'none') {
                 const {type, amplitude: rawAmplitude} = circle.waveform;
@@ -1657,10 +1703,12 @@
             state.aspects.forEach(a => {minX=Math.min(minX, a.x-a.radius); minY=Math.min(minY, a.y-a.radius); maxX=Math.max(maxX, a.x+a.radius); maxY=Math.max(maxY, a.y+a.radius);}); 
             const padding=50; minX-=padding; minY-=padding; maxX+=padding; maxY+=padding; 
             const worldWidth = maxX-minX; const worldHeight = maxY-minY; 
+            const theme = THEMES[state.ui.currentTheme];
             let svgElements=[]; const tempCtx=document.createElement('canvas').getContext('2d'); 
+            svgElements.push(`<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Special+Elite&family=VT323&display=swap');</style>`);
             svgElements.push(`<g transform="translate(${-minX}, ${-minY})">`); 
-            if (state.view.showGrid) { let gridLinesSvg=''; for (let x=Math.floor(minX/GRID_SIZE)*GRID_SIZE; x<=maxX; x+=GRID_SIZE) gridLinesSvg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" stroke="rgba(0,0,0,0.1)" stroke-width="0.5" />`; for (let y=Math.floor(minY/GRID_SIZE)*GRID_SIZE; y<=maxY; y+=GRID_SIZE) gridLinesSvg += `<line x1="${minX}" y1="${y}" x2="${maxX}" y2="${y}" stroke="rgba(0,0,0,0.1)" stroke-width="0.5" />`; svgElements.push(gridLinesSvg);} 
-            if (state.view.showRings && state.npcCore) { let ringsSvg=''; CONCENTRIC_RING_RADII.forEach(radius => ringsSvg += `<circle cx="${state.npcCore.x}" cy="${state.npcCore.y}" r="${radius}" fill="none" stroke="rgba(100,100,100,0.2)" stroke-width="1" stroke-dasharray="5,5" />`); svgElements.push(ringsSvg);} 
+            if (state.view.showGrid) { let gridLinesSvg=''; for (let x=Math.floor(minX/GRID_SIZE)*GRID_SIZE; x<=maxX; x+=GRID_SIZE) gridLinesSvg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" stroke="${theme['--grid-color']}" stroke-width="0.5" />`; for (let y=Math.floor(minY/GRID_SIZE)*GRID_SIZE; y<=maxY; y+=GRID_SIZE) gridLinesSvg += `<line x1="${minX}" y1="${y}" x2="${maxX}" y2="${y}" stroke="${theme['--grid-color']}" stroke-width="0.5" />`; svgElements.push(gridLinesSvg);} 
+            if (state.view.showRings && state.npcCore) { let ringsSvg=''; CONCENTRIC_RING_RADII.forEach(radius => ringsSvg += `<circle cx="${state.npcCore.x}" cy="${state.npcCore.y}" r="${radius}" fill="none" stroke="${theme['--ring-color']}" stroke-width="1" stroke-dasharray="5,5" />`); svgElements.push(ringsSvg);} 
             
             state.aspects.forEach(aspect => {
                 if (aspect.transitions && aspect.transitions.length > 0) {
@@ -1674,12 +1722,12 @@
                             const endX = targetAspect.x - targetAspect.radius * Math.cos(angle);
                             const endY = targetAspect.y - targetAspect.radius * Math.sin(angle);
 
-                            svgElements.push(`<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}" stroke="${TRANSITION_ARROW_COLOR}" stroke-width="1.5" />`);
-                            svgElements.push(`<polygon points="${endX.toFixed(2)},${endY.toFixed(2)} ${(endX - arrowLength * Math.cos(angle - Math.PI / 7)).toFixed(2)},${(endY - arrowLength * Math.sin(angle - Math.PI / 7)).toFixed(2)} ${(endX - arrowLength * Math.cos(angle + Math.PI / 7)).toFixed(2)},${(endY - arrowLength * Math.sin(angle + Math.PI / 7)).toFixed(2)}" fill="${TRANSITION_ARROW_COLOR}" />`);
+                            svgElements.push(`<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}" stroke="${theme['--transition-arrow-color']}" stroke-width="1.5" />`);
+                            svgElements.push(`<polygon points="${endX.toFixed(2)},${endY.toFixed(2)} ${(endX - arrowLength * Math.cos(angle - Math.PI / 7)).toFixed(2)},${(endY - arrowLength * Math.sin(angle - Math.PI / 7)).toFixed(2)} ${(endX - arrowLength * Math.cos(angle + Math.PI / 7)).toFixed(2)},${(endY - arrowLength * Math.sin(angle + Math.PI / 7)).toFixed(2)}" fill="${theme['--transition-arrow-color']}" />`);
                             if (trans.label) {
                                 const midX = (startX + endX) / 2; const midY = (startY + endY) / 2;
                                 const labelOffsetX = 10 * Math.sin(angle); const labelOffsetY = -10 * Math.cos(angle);
-                                svgElements.push(`<text x="${(midX + labelOffsetX).toFixed(2)}" y="${(midY + labelOffsetY).toFixed(2)}" font-family="Inter, sans-serif" font-size="10" font-style="italic" fill="${TRANSITION_LABEL_COLOR}" text-anchor="middle" dominant-baseline="middle">${escapeXml(trans.label)}</text>`);
+                                svgElements.push(`<text x="${(midX + labelOffsetX).toFixed(2)}" y="${(midY + labelOffsetY).toFixed(2)}" font-family="${theme['--font-main']}" font-size="10" font-style="italic" fill="${theme['--transition-label-color']}" text-anchor="middle" dominant-baseline="middle">${escapeXml(trans.label)}</text>`);
                             }
                         }
                     });
@@ -1687,10 +1735,10 @@
             });
 
             addCircleToSvg(state.npcCore, svgElements, tempCtx); 
-            state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') { const angle = Math.atan2(state.npcCore.y-aspect.y, state.npcCore.x-aspect.x); const startX = aspect.x+aspect.radius*Math.cos(angle); const startY = aspect.y+aspect.radius*Math.sin(angle); const endX = state.npcCore.x-state.npcCore.radius*Math.cos(angle); const endY = state.npcCore.y-state.npcCore.radius*Math.sin(angle); const dashArray = aspect.connectionToNpcCore==='dashed' ? 'stroke-dasharray="10,5"':''; svgElements.push(`<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}" stroke="#374151" stroke-width="2" ${dashArray} />`);}}); 
+            state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') { const angle = Math.atan2(state.npcCore.y-aspect.y, state.npcCore.x-aspect.x); const startX = aspect.x+aspect.radius*Math.cos(angle); const startY = aspect.y+aspect.radius*Math.sin(angle); const endX = state.npcCore.x-state.npcCore.radius*Math.cos(angle); const endY = state.npcCore.y-state.npcCore.radius*Math.sin(angle); const isDarkTheme = ['codex-night', 'arcade-dark', 'blueprint'].includes(state.ui.currentTheme); const strokeColor = isDarkTheme ? '#f1f5f9' : '#374151'; const dashArray = aspect.connectionToNpcCore==='dashed' ? 'stroke-dasharray="10,5"':''; svgElements.push(`<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}" stroke="${strokeColor}" stroke-width="2" ${dashArray} />`);}}); 
             state.aspects.forEach(aspect => addCircleToSvg(aspect, svgElements, tempCtx)); 
             svgElements.push(`</g>`); 
-            const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${worldWidth}" height="${worldHeight}" viewBox="0 0 ${worldWidth} ${worldHeight}" style="background-color: #ffffff;">${svgElements.join('')}</svg>`; 
+            const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${worldWidth}" height="${worldHeight}" viewBox="0 0 ${worldWidth} ${worldHeight}" style="background-color: ${theme['--bg-canvas']};">${svgElements.join('')}</svg>`; 
             const svgBlob = new Blob([svgContent], {type:'image/svg+xml;charset=utf-8'}); const svgUrl = URL.createObjectURL(svgBlob); 
             const a=document.createElement('a'); a.href=svgUrl; a.download='npc-emotion-map.svg'; a.click(); a.remove(); URL.revokeObjectURL(svgUrl); showMessage('SVG Exported', 'Your NPC emotion map has been prepared for download.');
         });
@@ -1772,7 +1820,7 @@
                     const newAspect = { 
                         id: `aspect${state.nextAspectId++}`, text: term, x: initialX, y: initialY, 
                         radius: ASPECT_DEFAULT_RADIUS, color: ASPECT_DEFAULT_COLOR, isNpcCore: false, 
-                        connectionToNpcCore: 'dashed', 
+                        connectionToNpcCore: null, 
                         aura: null, waveform: { type: 'none', amplitude: 10 },
                         transitions: []
                     };
@@ -1787,7 +1835,8 @@
 
         // --- Initialisation ---
         window.addEventListener('resize', resizeCanvas);
-        loadApiKey(); // Load API key on start
+        loadApiKey();
+        loadTheme();
         setCopyright();
         populateVocabulary();
         toggleRingsCheckbox.checked = state.view.showRings;
