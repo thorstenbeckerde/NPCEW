@@ -1710,40 +1710,64 @@
         async function dataURLtoBlob(dataurl) { const arr = dataurl.split(','); const mimeMatch = arr[0].match(/:(.*?);/); if (!mimeMatch) { console.error("Invalid data URL: mime type not found"); return null; } const mime = mimeMatch[1]; const bstr = atob(arr[1]); let n = bstr.length; const u8arr = new Uint8Array(n); while (n--) { u8arr[n] = bstr.charCodeAt(n); } return new Blob([u8arr], { type: mime }); }
         
         exportPngButton.addEventListener('click', async () => { 
-            const previouslySelectedId=state.selectedCircleId; 
-            state.selectedCircleId=null; drawAll(); 
-            
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = npcWeaverCanvas.width;
-            exportCanvas.height = npcWeaverCanvas.height;
-            const exportCtx = exportCanvas.getContext('2d');
+    const previouslySelectedId = state.selectedCircleId; 
+    state.selectedCircleId = null; // Temporarily deselect to remove the highlight from the export
+    drawAll(); // Redraw the main canvases to apply the deselection
 
-            exportCtx.drawImage(backgroundCanvas, 0, 0);
-            
-            const tempPanX = state.view.panX; const tempPanY = state.view.panY; const tempScale = state.view.scale;
-            exportCtx.save();
-            exportCtx.translate(tempPanX, tempPanY); 
-            exportCtx.scale(tempScale, tempScale); 
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = npcWeaverCanvas.width;
+    exportCanvas.height = npcWeaverCanvas.height;
+    const exportCtx = exportCanvas.getContext('2d');
 
-            state.aspects.forEach(aspect => { 
-                if (aspect.transitions && aspect.transitions.length > 0) {
-                    aspect.transitions.forEach(trans => {
-                        const targetAspect = state.aspects.find(a => a.id === trans.targetId);
-                        if (targetAspect) { drawTransitionArrow(aspect, targetAspect, trans.label, exportCtx); }
-                    });
-                }
-            });
-            drawCircle(state.npcCore, exportCtx); 
-            state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') drawLineToNpcCore(aspect, state.npcCore, aspect.connectionToNpcCore, exportCtx); }); 
-            state.aspects.forEach(c => drawCircle(c, exportCtx)); 
-            exportCtx.restore();
+    // Correctly composite the final rendered canvases
+    exportCtx.drawImage(backgroundCanvas, 0, 0);
+    exportCtx.drawImage(npcWeaverCanvas, 0, 0);
 
-            const dataURL=exportCanvas.toDataURL('image/png'); 
-            
-            if (window.showSaveFilePicker) { try { const blob = await dataURLtoBlob(dataURL); if (!blob) { showMessage('Export Error', 'Could not convert canvas to Blob.'); state.selectedCircleId=previouslySelectedId; drawAll(); return; } const fileHandle = await window.showSaveFilePicker({ suggestedName: 'npc-emotion-map.png', types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] }, }], }); const writableStream = await fileHandle.createWritable(); await writableStream.write(blob); await writableStream.close(); showMessage('PNG Exported', `Map exported as ${fileHandle.name}.`); } catch (err) { if (err.name !== 'AbortError') { const a = document.createElement('a'); a.href = dataURL; a.download = 'npc-emotion-map.png'; a.click(); a.remove(); showMessage('PNG Exported (Fallback)', 'Your map has been prepared for download using a fallback method.'); } else { console.info('PNG export aborted by user.'); } } } else { const a=document.createElement('a'); a.href=dataURL; a.download='npc-emotion-map.png'; a.click(); a.remove(); showMessage('PNG Exported', 'Your map has been prepared for download.'); } 
-            state.selectedCircleId=previouslySelectedId; 
-            drawAll(); 
-        });
+    const dataURL = exportCanvas.toDataURL('image/png'); 
+
+    // This block handles the file download and is unchanged
+    if (window.showSaveFilePicker) { 
+        try { 
+            const blob = await dataURLtoBlob(dataURL); 
+            if (!blob) { 
+                showMessage('Export Error', 'Could not convert canvas to Blob.'); 
+                state.selectedCircleId = previouslySelectedId; 
+                drawAll(); 
+                return; 
+            } 
+            const fileHandle = await window.showSaveFilePicker({ 
+                suggestedName: 'npc-emotion-map.png', 
+                types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] }, }], 
+            }); 
+            const writableStream = await fileHandle.createWritable(); 
+            await writableStream.write(blob); 
+            await writableStream.close(); 
+            showMessage('PNG Exported', `Map exported as ${fileHandle.name}.`); 
+        } catch (err) { 
+            if (err.name !== 'AbortError') { 
+                const a = document.createElement('a'); 
+                a.href = dataURL; 
+                a.download = 'npc-emotion-map.png'; 
+                a.click(); 
+                a.remove(); 
+                showMessage('PNG Exported (Fallback)', 'Your map has been prepared for download using a fallback method.'); 
+            } else { 
+                console.info('PNG export aborted by user.'); 
+            } 
+        } 
+    } else { 
+        const a = document.createElement('a'); 
+        a.href = dataURL; 
+        a.download = 'npc-emotion-map.png'; 
+        a.click(); 
+        a.remove(); 
+        showMessage('PNG Exported', 'Your map has been prepared for download.'); 
+    } 
+
+    // Restore the selection and redraw the canvas for the user
+    state.selectedCircleId = previouslySelectedId; 
+    drawAll(); 
+});
 
         function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'}[c]));}
         
@@ -1798,7 +1822,8 @@
             const worldWidth = maxX-minX; const worldHeight = maxY-minY; 
             const theme = THEMES[state.ui.currentTheme];
             let svgElements=[]; const tempCtx=document.createElement('canvas').getContext('2d'); 
-            svgElements.push(`<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Special+Elite&family=VT323&family=Noto+Sans+JP:wght@400;500&family=Nunito:wght@400;700&family=Cormorant+Garamond:wght@400;600&display=swap');</style>`);
+            // The corrected line
+			svgElements.push(`<style><![CDATA[@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Special+Elite&family=VT323&family=Noto+Sans+JP:wght@400;500&family=Nunito:wght@400;700&family=Cormorant+Garamond:wght@400;600&display=swap');]]></style>`);
             svgElements.push(`<g transform="translate(${-minX}, ${-minY})">`); 
             if (state.view.showGrid) { let gridLinesSvg=''; for (let x=Math.floor(minX/GRID_SIZE)*GRID_SIZE; x<=maxX; x+=GRID_SIZE) gridLinesSvg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" stroke="${theme['--grid-color']}" stroke-width="0.5" />`; for (let y=Math.floor(minY/GRID_SIZE)*GRID_SIZE; y<=maxY; y+=GRID_SIZE) gridLinesSvg += `<line x1="${minX}" y1="${y}" x2="${maxX}" y2="${y}" stroke="${theme['--grid-color']}" stroke-width="0.5" />`; svgElements.push(gridLinesSvg);} 
             if (state.view.showRings && state.npcCore) { let ringsSvg=''; CONCENTRIC_RING_RADII.forEach(radius => ringsSvg += `<circle cx="${state.npcCore.x}" cy="${state.npcCore.y}" r="${radius}" fill="none" stroke="${theme['--ring-color']}" stroke-width="1" stroke-dasharray="5,5" />`); svgElements.push(ringsSvg);} 
