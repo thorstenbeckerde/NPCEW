@@ -214,7 +214,7 @@
                 </div>
             </div>
 
-            <div class="pt-4 themed-border border-t space-y-2">
+            <div id="emotionalStateControls" class="pt-4 themed-border border-t space-y-2">
                 <h2 class="text-lg font-semibold">Emotional State Controls</h2>
                 <button id="addAspectButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-150 ease-in-out">
                     Add Emotional State
@@ -357,9 +357,9 @@
             <div class="pt-4 themed-border border-t space-y-3">
                 <h2 class="text-lg font-semibold">Usage & Donations</h2>
                 <p class="info-box text-xs">
-                    Use of the NPC Emotion Weaver app is free, including commercial projects. If you find it useful, please consider supporting my work with a donation.
+                    Use of the NPC Emotion Weaver app is free for personal use and game development, including commercial games. If you find it useful, please consider supporting my work with a donation.
                     <br><br>
-                    For questions and inquiries feel free to reach out to me at <a href="mailto:hello@thorstenbecker.de">hello@thorstenbecker.de</a>.
+                    For all other uses, including commercial, academic, or therapeutic, a license is required. Feel free to reach out with questions and inquiries at <a href="mailto:hello@thorstenbecker.de">hello@thorstenbecker.de</a>.
                 </p>
                 <a href="https://ko-fi.com/thorstenbecker" id="donationButton" target="_blank" rel="noopener noreferrer" class="w-full text-white font-bold py-2 px-4 rounded-lg shadow flex items-center justify-center text-base">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -720,6 +720,26 @@
         const getDraggingCircle = () => { if (!state.draggingCircleId) return null; return state.aspects.find(a => a.id === state.draggingCircleId); };
         function setCopyright() { const currentYear = new Date().getFullYear(); copyrightNoticeDiv.innerHTML = `&copy; ${currentYear} Thorsten Becker, <a href="https://www.thorstenbecker.de" target="_blank" class="hover:underline">www.thorstenbecker.de</a>`; }
         
+        /**
+         * Scrolls the side panel to a specific UI element.
+         * @param {string} elementId The ID of the element to scroll into view.
+         */
+        function focusPanel(elementId) {
+            requestAnimationFrame(() => {
+                const controlPanelContent = document.querySelector('.control-panel-content');
+                const targetElement = document.getElementById(elementId);
+                if (targetElement && controlPanelContent) {
+                    // Check if the element is visible before trying to scroll.
+                    if (targetElement.offsetParent !== null) {
+                         controlPanelContent.scrollTo({ 
+                            top: targetElement.offsetTop - 20, // -20 provides padding from the top edge
+                            behavior: 'smooth' 
+                        });
+                    }
+                }
+            });
+        }
+
         // --- Gemini API Integration ---
         async function callGemini(prompt, isJsonOutput = false) {
             const apiKey = getApiKey();
@@ -1129,6 +1149,8 @@
             const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0); 
             const worldPos = getScreenToWorldPos(clientX, clientY); 
             let clickedOnCircle = false; 
+            const previousSelectedId = state.selectedCircleId;
+
             for (let i=state.aspects.length-1; i>=0; i--) { 
                 const aspect=state.aspects[i]; 
                 const dist = Math.hypot(aspect.x-worldPos.x, aspect.y-worldPos.y); 
@@ -1162,7 +1184,15 @@
                 state.view.lastPanCoord.y = clientY - rect.top; 
                 npcWeaverCanvas.classList.add('grabbing');
             } 
-            updateControls(); 
+
+            const justSelectedAnAspect = state.selectedCircleId && state.selectedCircleId !== previousSelectedId && state.selectedCircleId !== 'npcCore';
+
+            updateControls();
+            
+            if (justSelectedAnAspect) {
+                focusPanel('selectedAspectControls');
+            }
+            
             draw(); 
         }
         function handleMouseMove(e) { 
@@ -1192,7 +1222,6 @@
                     draggingCircle.x = Math.round(draggingCircle.x / GRID_SIZE) * GRID_SIZE;
                     draggingCircle.y = Math.round(draggingCircle.y / GRID_SIZE) * GRID_SIZE;
                 }
-                checkClusterWarning(draggingCircle);
             }
             state.draggingCircleId = null;
             if (state.view.isPanning) {
@@ -1311,13 +1340,6 @@
                     waveAmplitude.disabled = wf.type === 'none';
                     document.getElementById('connectionControls').classList.remove('hidden');
                     populateTransitionControls(selectedCircle);
-                    
-                    setTimeout(() => {
-                        const controlPanelContent = document.querySelector('.control-panel-content');
-                        if (selectedAspectControls.offsetTop < controlPanelContent.scrollTop || (selectedAspectControls.offsetTop + selectedAspectControls.offsetHeight) > (controlPanelContent.scrollTop + controlPanelContent.clientHeight)) {
-                            controlPanelContent.scrollTo({ top: selectedAspectControls.offsetTop - 20, behavior: 'smooth' });
-                        }
-                    }, 50); 
                 }
             } else {
                 selectedAspectControls.classList.add('hidden');
@@ -1386,15 +1408,6 @@
                 showMessage("No Target", "Please select a target state for the transition.");
             }
         });
-
-
-        function doCirclesOverlap(c1, c2) { if (!c1 || !c2 || c1.id === c2.id) return false; const dist = Math.hypot(c1.x - c2.x, c1.y - c2.y); return dist < (c1.radius + c2.radius); }
-        function checkClusterWarning(movedCircle) {
-            if (state.ui.hasShownClusterWarning) return; 
-            const cluster = new Set(); const queue = [movedCircle]; const visited = new Set([movedCircle.id]);
-            while(queue.length > 0) { const current = queue.shift(); cluster.add(current); for (const other of state.aspects) { if (!visited.has(other.id) && doCirclesOverlap(current, other)) { visited.add(other.id); queue.push(other); } } }
-            if (cluster.size > 3) { showMessage('Note on Clustering', "Clustering several states closely might make the map hard to read. Consider spacing them out or using transitions to link them."); state.ui.hasShownClusterWarning = true; }
-        }
         
         addAspectButton.addEventListener('click', () => { 
             const devicePixelRatio = window.devicePixelRatio||1; 
@@ -1416,8 +1429,7 @@
             }; 
             if (state.view.showGrid) { newAspect.x = Math.round(newAspect.x/GRID_SIZE)*GRID_SIZE; newAspect.y = Math.round(newAspect.y/GRID_SIZE)*GRID_SIZE;} 
             state.aspects.push(newAspect); 
-            state.selectedCircleId = newAspect.id; 
-            updateControls(); 
+            updateAspectCount();
             draw();
         });
         aspectText.addEventListener('input', (e) => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) {selectedCircle.text = e.target.value; selectedAspectName.textContent = selectedCircle.text.substring(0,20) + (selectedCircle.text.length > 20 ? '...':''); updateControls(); draw();}}); 
@@ -1461,10 +1473,20 @@
                 });
                 state.selectedCircleId = null; 
                 updateControls(); 
+                focusPanel('emotionalStateControls');
                 draw();
             }
         });
-        undeleteAspectButton.addEventListener('click', () => { if (state.lastDeletedAspect) { state.aspects.push(state.lastDeletedAspect); state.selectedCircleId = state.lastDeletedAspect.id; state.lastDeletedAspect = null; updateControls(); draw();}});
+        undeleteAspectButton.addEventListener('click', () => { 
+            if (state.lastDeletedAspect) { 
+                state.aspects.push(state.lastDeletedAspect); 
+                state.selectedCircleId = state.lastDeletedAspect.id; 
+                state.lastDeletedAspect = null; 
+                updateControls(); 
+                focusPanel('selectedAspectControls');
+                draw();
+            }
+        });
         toggleRingsCheckbox.addEventListener('change', (e) => { state.view.showRings = e.target.checked; drawAll();});
         toggleGridCheckbox.addEventListener('change', (e) => { state.view.showGrid = e.target.checked; drawAll();});
         
@@ -1826,8 +1848,7 @@
                     };
                     if (state.view.showGrid) { newAspect.x = Math.round(newAspect.x / GRID_SIZE) * GRID_SIZE; newAspect.y = Math.round(newAspect.y / GRID_SIZE) * GRID_SIZE; }
                     state.aspects.push(newAspect);
-                    state.selectedCircleId = newAspect.id;
-                    updateControls();
+                    updateAspectCount();
                     draw();
                 }
             }
@@ -1853,7 +1874,10 @@
 
         updateControls(); 
         npcWeaverCanvas.setAttribute('tabindex', '0'); 
-        npcWeaverCanvas.focus(); 
+        // Focus the canvas on load to ensure keyboard shortcuts work immediately.
+        window.onload = () => {
+             npcWeaverCanvas.focus();
+        };
     </script>
 </body>
 </html>
