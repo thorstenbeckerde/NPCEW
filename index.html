@@ -1097,22 +1097,25 @@
             return { fontSize: finalFontSize, lines: lines };
         }
 
-        function drawLineToNpcCore(fromCircle, toNpcCore, lineType, targetCtx = ctx) { 
+		function drawLineToNpcCore(fromCircle, toNpcCore, lineType, targetCtx = ctx) {
             const theme = THEMES[state.ui.currentTheme];
-            const isDarkTheme = ['codex-night', 'final-fantasy-crystal', 'blueprint'].includes(state.ui.currentTheme);
-            targetCtx.beginPath(); 
-            const angle = Math.atan2(toNpcCore.y-fromCircle.y, toNpcCore.x-fromCircle.x); 
-            const startX = fromCircle.x+fromCircle.radius*Math.cos(angle); 
-            const startY = fromCircle.y+fromCircle.radius*Math.sin(angle); 
-            const endX = toNpcCore.x-toNpcCore.radius*Math.cos(angle); 
-            const endY = toNpcCore.y-toNpcCore.radius*Math.sin(angle); 
-            targetCtx.moveTo(startX, startY); 
-            targetCtx.lineTo(endX, endY); 
-            targetCtx.strokeStyle = isDarkTheme ? '#f1f5f9' : '#374151';
-            targetCtx.lineWidth = 2/state.view.scale; 
-            if(lineType === 'dashed') targetCtx.setLineDash([10/state.view.scale, 5/state.view.scale]); 
-            else targetCtx.setLineDash([]); 
-            targetCtx.stroke(); 
+            // The isDarkTheme check is no longer the best way to determine line color for all themes.
+            // It's better to use a color from the theme itself that is guaranteed to have contrast.
+            const strokeColor = theme['--text-main']; // Use the main text color for high contrast.
+
+            targetCtx.beginPath();
+            const angle = Math.atan2(toNpcCore.y-fromCircle.y, toNpcCore.x-fromCircle.x);
+            const startX = fromCircle.x+fromCircle.radius*Math.cos(angle);
+            const startY = fromCircle.y+fromCircle.radius*Math.sin(angle);
+            const endX = toNpcCore.x-toNpcCore.radius*Math.cos(angle);
+            const endY = toNpcCore.y-toNpcCore.radius*Math.sin(angle);
+            targetCtx.moveTo(startX, startY);
+            targetCtx.lineTo(endX, endY);
+            targetCtx.strokeStyle = strokeColor; // Use the new high-contrast color
+            targetCtx.lineWidth = 2/state.view.scale;
+            if(lineType === 'dashed') targetCtx.setLineDash([10/state.view.scale, 5/state.view.scale]);
+            else targetCtx.setLineDash([]);
+            targetCtx.stroke();
             targetCtx.setLineDash([]);
         }
         
