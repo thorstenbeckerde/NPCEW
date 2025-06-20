@@ -135,7 +135,7 @@
         .symbol-button { font-size: 1.25rem; padding: 0.25rem; border-radius: 0.25rem; cursor: pointer; transition: background-color 0.2s; }
         .symbol-button.selected { background-color: #cbd5e1; }
         .tooltip { position: relative; display: inline-block; }
-        .tooltip .tooltiptext { visibility: hidden; width: 120px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1000; bottom: 125%; left: 50%; margin-left: -60px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip .tooltiptext { visibility: hidden; width: 140px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1000; bottom: 125%; left: 50%; margin-left: -70px; opacity: 0; transition: opacity 0.3s; }
         .tooltip .tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #555 transparent transparent transparent; }
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
@@ -350,23 +350,54 @@
 
             <div class="pt-4 themed-border border-t space-y-3">
                 <h2 class="text-lg font-semibold">Map Data & Profile</h2>
-                <button id="generateProfileButton" class="btn btn-info w-full font-semibold py-2 px-4 rounded-lg shadow mb-2 flex items-center justify-center">
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="saveMapButton" class="btn btn-success w-full font-semibold py-2 px-4 rounded-lg shadow">
+                        Save Map
+                    </button>
+                    <div>
+                        <label for="loadMapInput" class="sr-only">Load Map (JSON):</label>
+                        <input type="file" id="loadMapInput" accept=".json" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
+                </div>
+                 <button id="generateProfileButton" class="btn btn-info w-full font-semibold py-2 px-4 rounded-lg shadow flex items-center justify-center">
                     ✨ Generate NPC Emotional Profile <span class="loading-spinner hidden ml-2"></span>
                 </button>
-                <button id="saveMapButton" class="btn btn-success w-full font-semibold py-2 px-4 rounded-lg shadow">
-                    Save Map (JSON)
-                </button>
-                <div>
-                    <label for="loadMapInput" class="block text-sm font-medium mb-1">Load Map (JSON):</label>
-                    <input type="file" id="loadMapInput" accept=".json" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                
+                <h3 class="text-lg font-semibold pt-3 border-t themed-border">Export Formats</h3>
+                <div class="space-y-2">
+                    <h4 class="font-semibold text-sm">Visuals</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                         <button id="exportPngButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow" style="--btn-secondary-bg: #2dd4bf; --btn-secondary-hover-bg: #14b8a6;">
+                            PNG Image
+                        </button>
+                        <button id="exportSvgButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow">
+                            SVG Vector
+                        </button>
+                    </div>
+
+                    <h4 class="font-semibold text-sm pt-2">Game Engine & Dev Tools</h4>
+                    <div class="space-y-2">
+                        <button id="exportEngineJsonButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow" style="--btn-secondary-bg: #818cf8; --btn-secondary-hover-bg: #6366f1;">
+                           Engine-Ready JSON
+                        </button>
+                        <div class="tooltip w-full">
+                           <button id="exportRenpyButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow" style="--btn-secondary-bg: #fb923c; --btn-secondary-hover-bg: #f97316;">
+                               Ren'Py Script (.rpy)
+                           </button>
+                            <span class="tooltiptext">Exports character definitions and a transition map for Ren'Py visual novels.</span>
+                        </div>
+                    </div>
+                    
+                    <h4 class="font-semibold text-sm pt-2">Documents & Spreadsheets</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="exportMarkdownButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow" style="--btn-secondary-bg: #a5b4fc; --btn-secondary-hover-bg: #818cf8;">
+                           Markdown (.md)
+                        </button>
+                         <button id="exportCsvButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow" style="--btn-secondary-bg: #67e8f9; --btn-secondary-hover-bg: #22d3ee;">
+                           CSV Files
+                        </button>
+                    </div>
                 </div>
-                <h2 class="text-lg font-semibold mt-3">Export Map</h2>
-                <button id="exportPngButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow" style="--btn-secondary-bg: #2dd4bf; --btn-secondary-hover-bg: #14b8a6;">
-                    Export as PNG
-                </button>
-                <button id="exportSvgButton" class="btn btn-secondary w-full font-semibold py-2 px-4 rounded-lg shadow mt-2">
-                    Export as SVG
-                </button>
             </div>
 
             <div class="pt-4 themed-border border-t space-y-3">
@@ -494,7 +525,7 @@
              <li><strong>Data Management:</strong>
                 <ul class="list-disc list-inside ml-6">
                     <li><strong>Save/Load Map:</strong> You can save your entire map as a <code>.json</code> file to your computer and load it back into the tool later.</li>
-                    <li><strong>Export as PNG/SVG:</strong> Export a static image of your current map view for use in documents, presentations, or other tools.</li>
+                    <li><strong>Export Formats:</strong> Export a static image (PNG/SVG) or structured data (Engine JSON, Ren'Py, Markdown, CSV) of your map for use in other tools and game engines.</li>
                 </ul>
             </li>
         </ul>
@@ -562,6 +593,11 @@
         const loadMapInput = document.getElementById('loadMapInput');
         const exportPngButton = document.getElementById('exportPngButton');
         const exportSvgButton = document.getElementById('exportSvgButton');
+        const exportEngineJsonButton = document.getElementById('exportEngineJsonButton');
+        const exportRenpyButton = document.getElementById('exportRenpyButton');
+        const exportMarkdownButton = document.getElementById('exportMarkdownButton');
+        const exportCsvButton = document.getElementById('exportCsvButton');
+
         const textInputModal = document.getElementById('textInputModal');
         const closeModalButton = document.getElementById('closeModalButton');
         const modalTitle = document.getElementById('modalTitle');
@@ -1564,18 +1600,19 @@
         toggleRingsCheckbox.addEventListener('change', (e) => { state.view.showRings = e.target.checked; drawAll();});
         toggleGridCheckbox.addEventListener('change', (e) => { state.view.showGrid = e.target.checked; drawAll();});
         
+        function getColorNameFromValue(hexValue) { const found = Object.entries(FEMS_COLORS).find(([key, color]) => color.value === hexValue); return found ? found[0].charAt(0) + found[0].slice(1).toLowerCase() : "Unknown"; }
         function getEmotionalToneNameHelper(colorValue){ const foundColor = Object.values(FEMS_COLORS).find(c => c.value === colorValue); return foundColor ? foundColor.name.split(',')[0].toLowerCase() : "an undefined tone";}
-        function getIntensityDescriptor(radius){ if (radius < (ASPECT_DEFAULT_RADIUS*0.85)) return "low intensity"; if (radius > (ASPECT_DEFAULT_RADIUS*1.65)) return "high intensity"; return "moderate intensity";}
-        function getConnectionStrengthDescriptor(connectionType){ if (connectionType === 'solid') return "strong"; if (connectionType === 'dashed') return "subtle"; return "";}
+        function getIntensityDescriptor(radius){ if (radius < (ASPECT_DEFAULT_RADIUS*0.85)) return "low"; if (radius > (ASPECT_DEFAULT_RADIUS*1.65)) return "high"; return "moderate";}
+        function getConnectionStrengthDescriptor(connectionType){ if (connectionType === 'solid') return "strong"; if (connectionType === 'dashed') return "subtle"; return "none";}
         function getDistanceDescriptor(aspect, npcNode){ const distance = Math.hypot(aspect.x-npcNode.x, aspect.y-npcNode.y); if (distance < CONCENTRIC_RING_RADII[0]) return "core"; if (distance < CONCENTRIC_RING_RADII[1]) return "present"; return "distant";}
-        function getVolatilityType(waveformType){ if (waveformType === 'sine') return "stable"; if (waveformType === 'sawtooth') return "volatile"; return "";} 
+        function getVolatilityType(waveformType){ if (waveformType === 'sine') return "stable"; if (waveformType === 'sawtooth') return "volatile"; return "none";} 
         function getVolatilityIntensity(amplitude){ if (amplitude < 13) return "low"; if (amplitude < 22) return "moderate"; return "high";} 
         
         function generateLocalProfileForAspect(aspect, npcNode) { 
             let parts=[]; 
             parts.push(`The emotional state "${aspect.text}" is characterized by a ${getEmotionalToneNameHelper(aspect.color)} tone and ${getIntensityDescriptor(aspect.radius)}.`); 
             const connectionStrength = getConnectionStrengthDescriptor(aspect.connectionToNpcCore); 
-            if(connectionStrength) parts.push(`It has a ${connectionStrength} connection to the NPC's core, and its influence is currently ${getDistanceDescriptor(aspect, npcNode)}.`); 
+            if(connectionStrength !== 'none') parts.push(`It has a ${connectionStrength} connection to the NPC's core, and its influence is currently ${getDistanceDescriptor(aspect, npcNode)}.`); 
             else parts.push("It currently has no direct connection to the NPC's core."); 
             if (aspect.aura && aspect.aura.name !== 'None') parts.push(`This state is modified as ${aspect.aura.name.toLowerCase()}.`); 
             if (aspect.waveform && aspect.waveform.type !== 'none') parts.push(`Its volatility is ${getVolatilityType(aspect.waveform.type)} with ${getVolatilityIntensity(aspect.waveform.amplitude)} amplitude.`);
@@ -1588,14 +1625,14 @@
                     parts.push(`  - To ${targetName}, triggered by: "${trans.label || 'unspecified cause'}".`);
                 });
             }
-            return parts.join(' ') + "\n";
+            return parts.join(' ');
         }
 
         generateProfileButton.addEventListener('click', async () => { 
             state.ui.lastGeminiButtonId = generateProfileButton.id; // Store which button initiated the call
             if (state.aspects.length === 0) { showMessage("No Emotional States", "Add some emotional states to the map first."); return;} 
             let localProfileText = `NPC: "${state.npcCore.text}" (Core Tone: ${getEmotionalToneNameHelper(state.npcCore.color)})\n\n--- Emotional States Profile ---\n`;
-            localProfileText += state.aspects.map(aspect => generateLocalProfileForAspect(aspect, state.npcCore)).join('\n'); 
+            localProfileText += state.aspects.map(aspect => `[${aspect.text}]: ` + generateLocalProfileForAspect(aspect, state.npcCore)).join('\n\n'); 
             
             generatedContentModalTitle.textContent = "NPC Emotional Profile";
             generatedContentModalTextarea.value = localProfileText + "\n\n✨ Generating AI Interpretation...";
@@ -1707,70 +1744,74 @@
             }, 200);
         });
 
+        // --- Data Import / Export ---
+        
+        function downloadFile(filename, content, mimeType) {
+            const blob = new Blob([content], {type: mimeType});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
-        saveMapButton.addEventListener('click', () => { const mapData = {npcCore: state.npcCore, aspects: state.aspects, nextAspectId: state.nextAspectId, viewOptions:{showRings: state.view.showRings, showGrid: state.view.showGrid}, transform:{panX: state.view.panX, panY: state.view.panY, scale: state.view.scale}}; const jsonData = JSON.stringify(mapData, null, 2); const blob = new Blob([jsonData],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='npc-emotion-map.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showMessage('Map Saved', 'Your NPC emotion map data has been prepared for download.');});
+        saveMapButton.addEventListener('click', () => { 
+            const mapData = {
+                npcCore: state.npcCore, 
+                aspects: state.aspects, 
+                nextAspectId: state.nextAspectId, 
+                viewOptions:{showRings: state.view.showRings, showGrid: state.view.showGrid}, 
+                transform:{panX: state.view.panX, panY: state.view.panY, scale: state.view.scale}
+            };
+            const filename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_map.json';
+            downloadFile(filename, JSON.stringify(mapData, null, 2), 'application/json');
+            showMessage('Map Saved', 'Your NPC emotion map data has been prepared for download.');
+        });
+
         loadMapInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { const mapData = JSON.parse(e.target.result); if (mapData.npcCore && mapData.aspects && typeof mapData.nextAspectId !== 'undefined') { state.npcCore = mapData.npcCore; state.aspects = mapData.aspects.map(a => ({...a, transitions: a.transitions || [] })); state.nextAspectId = mapData.nextAspectId; const vo = mapData.viewOptions||{}; state.view.showRings = vo.showRings===undefined ? true : vo.showRings; state.view.showGrid = vo.showGrid===undefined ? false : vo.showGrid; const tr = mapData.transform||{}; state.view.panX = tr.panX||0; state.view.panY = tr.panY||0; state.view.scale = tr.scale||1.0; state.lastDeletedAspect=null; state.selectedCircleId=null; state.ui.hasShownNpcRenameWarning = !!state.npcCore.text && state.npcCore.text.toUpperCase() !== 'NPC'; resizeCanvas(); updateControls(); showMessage('Map Loaded', 'Map data has been loaded successfully.');} else if (mapData.selfCircle && mapData.aspects) { state.npcCore = {...mapData.selfCircle, id: 'npcCore', isNpcCore: true, text: mapData.selfCircle.text || NPC_CORE_DEFAULT_TEXT}; delete state.npcCore.isSelf; state.aspects = mapData.aspects.map(a => ({...a, connectionToNpcCore: a.connectionToSelf, transitions: a.transitions || []})); delete state.aspects.forEach(a => delete a.connectionToSelf); state.nextAspectId = mapData.nextAspectId || 0; const vo = mapData.viewOptions||{}; state.view.showRings = vo.showRings===undefined ? true : vo.showRings; state.view.showGrid = vo.showGrid===undefined ? false : vo.showGrid; const tr = mapData.transform||{}; state.view.panX = tr.panX||0; state.view.panY = tr.panY||0; state.view.scale = tr.scale||1.0; state.lastDeletedAspect=null; state.selectedCircleId=null; state.ui.hasShownNpcRenameWarning = !!state.npcCore.text && state.npcCore.text.toUpperCase() !== 'NPC'; resizeCanvas(); updateControls(); showMessage('Map Loaded (Legacy Format)', 'Old map format loaded. Please save to update.');} else showMessage('Load Error', 'Invalid map data file.');} catch (error) { console.error("Error loading map:", error); showMessage('Load Error', 'Could not parse map data.');} finally { loadMapInput.value = '';}}; reader.readAsText(file);});
         async function dataURLtoBlob(dataurl) { const arr = dataurl.split(','); const mimeMatch = arr[0].match(/:(.*?);/); if (!mimeMatch) { console.error("Invalid data URL: mime type not found"); return null; } const mime = mimeMatch[1]; const bstr = atob(arr[1]); let n = bstr.length; const u8arr = new Uint8Array(n); while (n--) { u8arr[n] = bstr.charCodeAt(n); } return new Blob([u8arr], { type: mime }); }
         
         exportPngButton.addEventListener('click', async () => { 
-    const previouslySelectedId = state.selectedCircleId; 
-    state.selectedCircleId = null; // Temporarily deselect to remove the highlight from the export
-    drawAll(); // Redraw the main canvases to apply the deselection
+            const previouslySelectedId = state.selectedCircleId; 
+            state.selectedCircleId = null; // Temporarily deselect to remove the highlight from the export
+            drawAll(); // Redraw the main canvases to apply the deselection
 
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = npcWeaverCanvas.width;
-    exportCanvas.height = npcWeaverCanvas.height;
-    const exportCtx = exportCanvas.getContext('2d');
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = npcWeaverCanvas.width;
+            exportCanvas.height = npcWeaverCanvas.height;
+            const exportCtx = exportCanvas.getContext('2d');
 
-    // Correctly composite the final rendered canvases
-    exportCtx.drawImage(backgroundCanvas, 0, 0);
-    exportCtx.drawImage(npcWeaverCanvas, 0, 0);
+            exportCtx.drawImage(backgroundCanvas, 0, 0);
+            exportCtx.drawImage(npcWeaverCanvas, 0, 0);
 
-    const dataURL = exportCanvas.toDataURL('image/png'); 
+            const dataURL = exportCanvas.toDataURL('image/png'); 
+            const filename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_map.png';
 
-    // This block handles the file download and is unchanged
-    if (window.showSaveFilePicker) { 
-        try { 
-            const blob = await dataURLtoBlob(dataURL); 
-            if (!blob) { 
-                showMessage('Export Error', 'Could not convert canvas to Blob.'); 
-                state.selectedCircleId = previouslySelectedId; 
-                drawAll(); 
-                return; 
-            } 
-            const fileHandle = await window.showSaveFilePicker({ 
-                suggestedName: 'npc-emotion-map.png', 
-                types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] }, }], 
-            }); 
-            const writableStream = await fileHandle.createWritable(); 
-            await writableStream.write(blob); 
-            await writableStream.close(); 
-            showMessage('PNG Exported', `Map exported as ${fileHandle.name}.`); 
-        } catch (err) { 
-            if (err.name !== 'AbortError') { 
-                const a = document.createElement('a'); 
-                a.href = dataURL; 
-                a.download = 'npc-emotion-map.png'; 
-                a.click(); 
-                a.remove(); 
-                showMessage('PNG Exported (Fallback)', 'Your map has been prepared for download using a fallback method.'); 
+            if (window.showSaveFilePicker) { 
+                try { 
+                    const blob = await dataURLtoBlob(dataURL); 
+                    if (!blob) { showMessage('Export Error', 'Could not convert canvas to Blob.'); state.selectedCircleId = previouslySelectedId; drawAll(); return; } 
+                    const fileHandle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] }, }], }); 
+                    const writableStream = await fileHandle.createWritable(); 
+                    await writableStream.write(blob); 
+                    await writableStream.close(); 
+                    showMessage('PNG Exported', `Map exported as ${fileHandle.name}.`); 
+                } catch (err) { 
+                    if (err.name !== 'AbortError') { 
+                        const a = document.createElement('a'); a.href = dataURL; a.download = filename; a.click(); a.remove(); 
+                        showMessage('PNG Exported (Fallback)', 'Your map has been prepared for download using a fallback method.'); 
+                    } else { console.info('PNG export aborted by user.'); } 
+                } 
             } else { 
-                console.info('PNG export aborted by user.'); 
+                const a = document.createElement('a'); a.href = dataURL; a.download = filename; a.click(); a.remove(); 
+                showMessage('PNG Exported', 'Your map has been prepared for download.'); 
             } 
-        } 
-    } else { 
-        const a = document.createElement('a'); 
-        a.href = dataURL; 
-        a.download = 'npc-emotion-map.png'; 
-        a.click(); 
-        a.remove(); 
-        showMessage('PNG Exported', 'Your map has been prepared for download.'); 
-    } 
-
-    // Restore the selection and redraw the canvas for the user
-    state.selectedCircleId = previouslySelectedId; 
-    drawAll(); 
-});
+            state.selectedCircleId = previouslySelectedId; 
+            drawAll(); 
+        });
 
         function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'}[c]));}
         
@@ -1825,8 +1866,7 @@
             const worldWidth = maxX-minX; const worldHeight = maxY-minY; 
             const theme = THEMES[state.ui.currentTheme];
             let svgElements=[]; const tempCtx=document.createElement('canvas').getContext('2d'); 
-            // The corrected line
-			svgElements.push(`<style><![CDATA[@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Special+Elite&family=VT323&family=Noto+Sans+JP:wght@400;500&family=Nunito:wght@400;700&family=Cormorant+Garamond:wght@400;600&display=swap');]]></style>`);
+            svgElements.push(`<style><![CDATA[@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Special+Elite&family=VT323&family=Noto+Sans+JP:wght@400;500&family=Nunito:wght@400;700&family=Cormorant+Garamond:wght@400;600&display=swap');]]></style>`);
             svgElements.push(`<g transform="translate(${-minX}, ${-minY})">`); 
             if (state.view.showGrid) { let gridLinesSvg=''; for (let x=Math.floor(minX/GRID_SIZE)*GRID_SIZE; x<=maxX; x+=GRID_SIZE) gridLinesSvg += `<line x1="${x}" y1="${minY}" x2="${x}" y2="${maxY}" stroke="${theme['--grid-color']}" stroke-width="0.5" />`; for (let y=Math.floor(minY/GRID_SIZE)*GRID_SIZE; y<=maxY; y+=GRID_SIZE) gridLinesSvg += `<line x1="${minX}" y1="${y}" x2="${maxX}" y2="${y}" stroke="${theme['--grid-color']}" stroke-width="0.5" />`; svgElements.push(gridLinesSvg);} 
             if (state.view.showRings && state.npcCore) { let ringsSvg=''; CONCENTRIC_RING_RADII.forEach(radius => ringsSvg += `<circle cx="${state.npcCore.x}" cy="${state.npcCore.y}" r="${radius}" fill="none" stroke="${theme['--ring-color']}" stroke-width="1" stroke-dasharray="5,5" />`); svgElements.push(ringsSvg);} 
@@ -1860,10 +1900,180 @@
             state.aspects.forEach(aspect => addCircleToSvg(aspect, svgElements, tempCtx)); 
             svgElements.push(`</g>`); 
             const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${worldWidth}" height="${worldHeight}" viewBox="0 0 ${worldWidth} ${worldHeight}" style="background-color: ${theme['--bg-canvas']};">${svgElements.join('')}</svg>`; 
-            const svgBlob = new Blob([svgContent], {type:'image/svg+xml;charset=utf-8'}); const svgUrl = URL.createObjectURL(svgBlob); 
-            const a=document.createElement('a'); a.href=svgUrl; a.download='npc-emotion-map.svg'; a.click(); a.remove(); URL.revokeObjectURL(svgUrl); showMessage('SVG Exported', 'Your NPC emotion map has been prepared for download.');
+            const filename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_map.svg';
+            downloadFile(filename, svgContent, 'image/svg+xml;charset=utf-8');
+            showMessage('SVG Exported', 'Your NPC emotion map has been prepared for download.');
         });
         
+        function generateEngineJson() {
+             const emotionalStates = state.aspects.map(aspect => {
+                return {
+                    id: aspect.id,
+                    name: aspect.text,
+                    intensity: aspect.radius,
+                    tone: getColorNameFromValue(aspect.color),
+                    relevance: getDistanceDescriptor(aspect, state.npcCore),
+                    influence: getConnectionStrengthDescriptor(aspect.connectionToNpcCore),
+                    modifier: aspect.aura ? aspect.aura.name : "None",
+                    volatility: {
+                        type: aspect.waveform ? getVolatilityType(aspect.waveform.type) : 'none',
+                        amplitude: aspect.waveform ? aspect.waveform.amplitude : 0
+                    },
+                    description: generateLocalProfileForAspect(aspect, state.npcCore)
+                }
+            });
+
+            const transitions = [];
+            state.aspects.forEach(aspect => {
+                if (aspect.transitions && aspect.transitions.length > 0) {
+                    aspect.transitions.forEach(t => {
+                        transitions.push({
+                            fromState: aspect.id,
+                            toState: t.targetId,
+                            trigger: t.label || "unspecified"
+                        });
+                    });
+                }
+            });
+
+            return {
+                profileSchemaVersion: "1.0",
+                generatedAt: new Date().toISOString(),
+                npc: {
+                    name: state.npcCore.text,
+                    baseTone: getColorNameFromValue(state.npcCore.color)
+                },
+                emotionalStates,
+                transitions
+            };
+        }
+        
+        exportEngineJsonButton.addEventListener('click', () => {
+            const engineJson = generateEngineJson();
+            const filename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_engine_profile.json';
+            downloadFile(filename, JSON.stringify(engineJson, null, 2), 'application/json');
+            showMessage('Engine JSON Exported', 'Your engine-ready JSON profile has been prepared for download.');
+        });
+        
+        exportRenpyButton.addEventListener('click', () => {
+            if (state.aspects.length === 0) { showMessage("Cannot Export", "Please add at least one emotional state to export a Ren'Py script."); return; }
+            let rpyString = `# Generated by NPC Emotion Weaver\n`;
+            rpyString += `# NPC: ${state.npcCore.text}\n`;
+            rpyString += `# Generated At: ${new Date().toUTCString()}\n\n`;
+            rpyString += `# Define a character for each emotional state.\n`;
+            rpyString += `# You can replace the image name ("elara_suspicious") with your actual file names.\n\n`;
+
+            const npcVarName = state.npcCore.text.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() || 'npc';
+            
+            state.aspects.forEach(aspect => {
+                const stateVarName = aspect.text.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+                rpyString += `define ${npcVarName}_${stateVarName} = Character("${state.npcCore.text}", image="${npcVarName}", associated_displayable=Image("${npcVarName}_${stateVarName}.png"))\n`;
+            });
+
+            rpyString += `\n# This is a comment block describing the transitions for developer reference.\n`;
+            rpyString += `# It can be used to script the story logic.\n#\n`;
+            rpyString += `# TRANSITIONS:\n#\n`;
+
+            state.aspects.forEach(aspect => {
+                if (aspect.transitions && aspect.transitions.length > 0) {
+                     const fromStateVarName = aspect.text.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+                     rpyString += `# State: ${aspect.text} (${npcVarName}_${fromStateVarName})\n`;
+                     aspect.transitions.forEach(t => {
+                        const targetAspect = state.aspects.find(a => a.id === t.targetId);
+                        if (targetAspect) {
+                            const toStateVarName = targetAspect.text.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+                            rpyString += `#  - TRIGGER: ${t.label || 'unspecified'}\n`;
+                            rpyString += `#    >> Transitions to: ${targetAspect.text} (${npcVarName}_${toStateVarName})\n`;
+                        }
+                     });
+                     rpyString += `#\n`;
+                }
+            });
+
+            const filename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_emotions.rpy';
+            downloadFile(filename, rpyString, 'text/plain');
+            showMessage('Ren\'Py Script Exported', 'Your .rpy script has been prepared for download.');
+        });
+
+        exportMarkdownButton.addEventListener('click', () => {
+            let mdString = `# NPC Emotional Profile: ${state.npcCore.text}\n`;
+            mdString += `*Generated on ${new Date().toDateString()} by NPC Emotion Weaver*\n\n`;
+            mdString += `## Core Identity\n**Name:** ${state.npcCore.text}\n`;
+            mdString += `**Base Tone:** ${getColorNameFromValue(state.npcCore.color)}\n\n---\n\n`;
+            mdString += `## Emotional States\n\n`;
+            
+            state.aspects.forEach(aspect => {
+                mdString += `### ➡️ State: ${aspect.text}\n`;
+                mdString += `- **ID:** \`${aspect.id}\`\n`;
+                mdString += `- **Tone:** ${getColorNameFromValue(aspect.color)} (${getEmotionalToneNameHelper(aspect.color)})\n`;
+                mdString += `- **Intensity:** ${getIntensityDescriptor(aspect.radius)} (${aspect.radius})\n`;
+                mdString += `- **Influence:** ${getConnectionStrengthDescriptor(aspect.connectionToNpcCore)}, ${getDistanceDescriptor(aspect, state.npcCore)} relevance\n`;
+                if(aspect.aura) mdString += `- **Modifier:** ${aspect.aura.name}\n`;
+                if(aspect.waveform && aspect.waveform.type !== 'none') mdString += `- **Volatility:** ${getVolatilityType(aspect.waveform.type)} (Amplitude: ${aspect.waveform.amplitude})\n`;
+                mdString += `- **Description:** ${generateLocalProfileForAspect(aspect, state.npcCore)}\n\n`;
+            });
+            
+            mdString += `---\n\n## Emotional Transitions\n\n`;
+            state.aspects.forEach(aspect => {
+                if (aspect.transitions && aspect.transitions.length > 0) {
+                     aspect.transitions.forEach(t => {
+                        const targetAspect = state.aspects.find(a => a.id === t.targetId);
+                        if (targetAspect) {
+                           mdString += `- **From \`${aspect.text}\` to \`${targetAspect.text}\`:**\n`;
+                           mdString += `  - **Trigger:** ${t.label || 'unspecified'}\n`;
+                        }
+                     });
+                }
+            });
+
+            const filename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_profile.md';
+            downloadFile(filename, mdString, 'text/markdown');
+            showMessage('Markdown Exported', 'Your profile has been prepared for download as a Markdown file.');
+        });
+
+        function toCsvRow(items) {
+            return items.map(item => {
+                const str = String(item);
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            }).join(',') + '\n';
+        }
+
+        exportCsvButton.addEventListener('click', () => {
+            // States CSV
+            let statesCsv = toCsvRow(['id', 'name', 'intensity', 'tone', 'relevance', 'influence', 'modifier', 'volatility_type', 'volatility_amplitude']);
+            state.aspects.forEach(a => {
+                statesCsv += toCsvRow([
+                    a.id, a.text, a.radius, getColorNameFromValue(a.color),
+                    getDistanceDescriptor(a, state.npcCore), getConnectionStrengthDescriptor(a.connectionToNpcCore),
+                    a.aura ? a.aura.name : 'None',
+                    a.waveform ? getVolatilityType(a.waveform.type) : 'none',
+                    a.waveform ? a.waveform.amplitude : 0
+                ]);
+            });
+            const statesFilename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_states.csv';
+            downloadFile(statesFilename, statesCsv, 'text/csv');
+
+            // Transitions CSV
+            let transitionsCsv = toCsvRow(['from_state_id', 'from_state_name', 'to_state_id', 'to_state_name', 'trigger']);
+            state.aspects.forEach(aspect => {
+                if (aspect.transitions) {
+                    aspect.transitions.forEach(t => {
+                        const target = state.aspects.find(a => a.id === t.targetId);
+                        transitionsCsv += toCsvRow([
+                            aspect.id, aspect.text, t.targetId, target ? target.text : 'Unknown', t.label || ''
+                        ]);
+                    });
+                }
+            });
+            const transitionsFilename = (state.npcCore.text.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'npc') + '_transitions.csv';
+            downloadFile(transitionsFilename, transitionsCsv, 'text/csv');
+
+            showMessage('CSV Files Exported', 'Your states and transitions have been prepared for download as two separate CSV files.');
+        });
+
         // --- Event Listeners ---
         npcWeaverCanvas.addEventListener('mousedown', (e) => { e.preventDefault(); handleMouseDown(e); });
         npcWeaverCanvas.addEventListener('mousemove', (e) => { e.preventDefault(); handleMouseMove(e); });
