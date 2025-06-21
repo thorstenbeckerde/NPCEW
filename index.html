@@ -846,6 +846,8 @@
          * @param {string} elementId The ID of the element to scroll into view.
          */
         function focusPanel(elementId) {
+            // This feature has been disabled to resolve scrolling issues on mobile browsers.
+            /*
             requestAnimationFrame(() => {
                 const targetElement = document.getElementById(elementId);
                 if (targetElement && targetElement.offsetParent !== null) {
@@ -869,6 +871,7 @@
                     }
                 }
             });
+            */
         }
 
         // --- Gemini API Integration ---
