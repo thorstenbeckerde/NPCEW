@@ -559,6 +559,7 @@
     </div>
 </div><button id="quickHelpModalCloseButton" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow">OK</button></div></div>
     <div id="confirmClearModal" class="modal"> <div class="modal-content"><h3 id="confirmClearModalTitle" class="text-xl font-semibold mb-4">Confirm Action</h3><p id="confirmClearModalText" class="text-sm mb-6">Are you sure you want to clear the entire map? This action cannot be undone.</p><div class="flex justify-end space-x-3"><button id="confirmClearCancelButton" class="themed-button bg-gray-300 hover:bg-gray-400 font-semibold py-2 px-4 rounded-lg shadow">Cancel</button><button id="confirmClearOkButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Clear Map</button></div></div></div>
+    <div id="confirmRestoreModal" class="modal"> <div class="modal-content"><h3 id="confirmRestoreModalTitle" class="text-xl font-semibold mb-4">Session Restored</h3><p id="confirmRestoreModalText" class="text-sm mb-6">Your previous unsaved work has been restored. This data is stored only in your browser and is not shared.</p><div class="flex justify-end space-x-3"><button id="confirmRestoreStartFreshButton" class="themed-button bg-gray-300 hover:bg-gray-400 font-semibold py-2 px-4 rounded-lg shadow">Start Fresh</button><button id="confirmRestoreOkButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow">Continue</button></div></div></div>
 
 <script>
         // --- Canvas Setup ---
@@ -635,6 +636,9 @@
         const confirmClearModal = document.getElementById('confirmClearModal');
         const confirmClearOkButton = document.getElementById('confirmClearOkButton');
         const confirmClearCancelButton = document.getElementById('confirmClearCancelButton');
+        const confirmRestoreModal = document.getElementById('confirmRestoreModal');
+        const confirmRestoreOkButton = document.getElementById('confirmRestoreOkButton');
+        const confirmRestoreStartFreshButton = document.getElementById('confirmRestoreStartFreshButton');
         const toggleVocabularyButton = document.getElementById('toggleVocabularyButton');
         const starterVocabularyContainer = document.getElementById('starterVocabularyContainer');
         const transitionTargetAspectSelect = document.getElementById('transitionTargetAspect');
@@ -872,6 +876,56 @@
                 }
             });
             */
+        }
+
+        function saveStateToLocalStorage() {
+            try {
+                // We only want to save the data, not the transient UI state
+                const stateToSave = {
+                    npcCore: state.npcCore,
+                    aspects: state.aspects,
+                    nextAspectId: state.nextAspectId,
+                    view: {
+                        scale: state.view.scale,
+                        panX: state.view.panX,
+                        panY: state.view.panY,
+                        showRings: state.view.showRings,
+                        showGrid: state.view.showGrid,
+                    },
+                    hasShownNpcRenameWarning: state.ui.hasShownNpcRenameWarning,
+                };
+                localStorage.setItem('npcWeaverAutoSave', JSON.stringify(stateToSave));
+            } catch (e) {
+                console.error("Could not save state to localStorage:", e);
+            }
+        }
+
+        function loadStateFromLocalStorage() {
+            try {
+                const savedStateJSON = localStorage.getItem('npcWeaverAutoSave');
+                if (savedStateJSON) {
+                    const savedState = JSON.parse(savedStateJSON);
+                    
+                    // Carefully restore the state
+                    state.npcCore = savedState.npcCore;
+                    state.aspects = savedState.aspects;
+                    state.nextAspectId = savedState.nextAspectId;
+                    state.view.scale = savedState.view.scale || 1.0;
+                    state.view.panX = savedState.view.panX || 0;
+                    state.view.panY = savedState.view.panY || 0;
+                    state.view.showRings = savedState.view.showRings !== false; // default to true
+                    state.view.showGrid = savedState.view.showGrid === true;   // default to false
+                    state.ui.hasShownNpcRenameWarning = savedState.hasShownNpcRenameWarning || false;
+
+                    console.log("NPC Emotion Weaver: Restored map state from a previous session.");
+                    confirmRestoreModal.style.display = 'block';
+                    return true;
+                }
+            } catch (e) {
+                console.error("Could not load state from localStorage:", e);
+                localStorage.removeItem('npcWeaverAutoSave'); // Clear corrupted data
+            }
+            return false;
         }
 
         // --- Gemini API Integration ---
@@ -1277,6 +1331,9 @@
             state.aspects.forEach(aspect => { if (aspect.connectionToNpcCore && aspect.connectionToNpcCore !== 'none') drawLineToNpcCore(aspect, state.npcCore, aspect.connectionToNpcCore); }); 
             state.aspects.forEach(c => drawCircle(c)); 
             ctx.restore(); 
+            
+            // Automatically save the state after every redraw
+            saveStateToLocalStorage();
         }
 
         function getScreenToWorldPos(screenX, screenY) { const rect = npcWeaverCanvas.getBoundingClientRect(); const logicalCanvasX = (screenX-rect.left); const logicalCanvasY = (screenY-rect.top); const worldX = (logicalCanvasX-state.view.panX)/state.view.scale; const worldY = (logicalCanvasY-state.view.panY)/state.view.scale; return {x: worldX, y: worldY};}
@@ -1440,6 +1497,24 @@
             saveApiKey(apiKeyInput.value.trim());
             apiKeyModal.style.display = "none";
         };
+
+        confirmRestoreOkButton.onclick = () => { confirmRestoreModal.style.display = "none"; };
+        confirmRestoreStartFreshButton.onclick = () => {
+             // This button shares logic with the main "Clear Map" button
+             try {
+                state.aspects = []; 
+                state.lastDeletedAspect = null; 
+                state.nextAspectId = 0; 
+                state.selectedCircleId = null; 
+                resetViewAndNpcCore(true); 
+                state.ui.hasShownNpcRenameWarning = false; 
+                updateControls(); 
+                drawAll(); 
+            } finally { 
+                localStorage.removeItem('npcWeaverAutoSave');
+                confirmRestoreModal.style.display = "none"; 
+            }
+        };
         
         window.onclick = (event) => {
             if (event.target == textInputModal) { textInputModal.style.display = "none"; state.ui.currentEditingCircleForModal = null; }
@@ -1448,6 +1523,7 @@
             if (event.target == quickHelpModal) { quickHelpModal.style.display = "none"; }
             if (event.target == confirmClearModal) { confirmClearModal.style.display = "none"; state.ui.isPerformingCriticalOperation = false; }
             if (event.target == apiKeyModal) { apiKeyModal.style.display = "none"; }
+            if (event.target == confirmRestoreModal) { confirmRestoreModal.style.display = "none"; }
         };
 
         function showMessage(title, message) { messageModalTitle.textContent = title; messageModalText.textContent = message; messageModal.style.display = "block";}
@@ -1595,7 +1671,23 @@
         bringToFrontButton.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) { const index = state.aspects.findIndex(a => a.id === selectedCircle.id); if (index > -1 && index < state.aspects.length - 1) { const [aspectToMove] = state.aspects.splice(index, 1); state.aspects.push(aspectToMove); draw(); } } });
         sendToBackButton.addEventListener('click', () => { const selectedCircle = getSelectedCircle(); if (selectedCircle && !selectedCircle.isNpcCore) { const index = state.aspects.findIndex(a => a.id === selectedCircle.id); if (index > 0) { const [aspectToMove] = state.aspects.splice(index, 1); state.aspects.unshift(aspectToMove); draw(); } } });
         clearMapButton.addEventListener('click', () => { state.ui.isPerformingCriticalOperation = true; confirmClearModal.style.display = "block"; });
-        confirmClearOkButton.onclick = () => { try { state.aspects = []; state.lastDeletedAspect = null; state.nextAspectId = 0; state.selectedCircleId = null; resetViewAndNpcCore(true); state.ui.hasShownNpcRenameWarning = false; updateControls(); drawAll(); } finally { confirmClearModal.style.display = "none"; state.ui.isPerformingCriticalOperation = false; } };
+        confirmClearOkButton.onclick = () => { 
+            try { 
+                state.aspects = []; 
+                state.lastDeletedAspect = null; 
+                state.nextAspectId = 0; 
+                state.selectedCircleId = null; 
+                resetViewAndNpcCore(true); 
+                state.ui.hasShownNpcRenameWarning = false; 
+                updateControls(); 
+                drawAll(); 
+            } finally { 
+                confirmClearModal.style.display = "none"; 
+                state.ui.isPerformingCriticalOperation = false; 
+                // Remove the auto-saved data
+                localStorage.removeItem('npcWeaverAutoSave');
+            } 
+        };
         confirmClearCancelButton.onclick = () => { confirmClearModal.style.display = "none"; state.ui.isPerformingCriticalOperation = false; };
         deleteAspectButton.addEventListener('click', () => { 
             const selectedCircle = getSelectedCircle(); 
@@ -2191,6 +2283,7 @@
         });
 
         // --- Initialisation ---
+        loadStateFromLocalStorage();
         window.addEventListener('resize', resizeCanvas);
         loadApiKey();
         loadTheme();
